@@ -231,13 +231,13 @@ final class TripCreationViewController: UIViewController {
         let snapshots = stopViewModels.enumerated().map { index, viewModel -> TripStopSnapshot in
             TripStopSnapshot(
                 stopNumber: index + 1,
+                departureCityName: viewModel.selectedDepartureCity?.name,
                 country: viewModel.selectedCountry,
                 cityName: viewModel.selectedCity?.name,
                 travelerCount: viewModel.travelerCount,
                 startDate: viewModel.startDate,
                 endDate: viewModel.endDate,
                 transportType: viewModel.selectedTransportType,
-                ticketPrice: viewModel.ticketPrice,
                 hotels: viewModel.hotels,
                 selectedHotelIDs: Set(viewModel.hotels.filter { viewModel.isHotelSelected($0) }.map(\.id)),
                 places: viewModel.places,

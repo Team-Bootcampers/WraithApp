@@ -11,6 +11,13 @@ final class CountryCityCardView: BaseCardView, TripCreationCardUpdating {
 
     // MARK: - UI Components
 
+    private lazy var departureCityRow: SelectionRowView = {
+        let row = SelectionRowView(showsFlag: false)
+        row.translatesAutoresizingMaskIntoConstraints = false
+        row.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(didTapDepartureCityRow)))
+        return row
+    }()
+
     private lazy var countryRow: SelectionRowView = {
         let row = SelectionRowView(showsFlag: true)
         row.translatesAutoresizingMaskIntoConstraints = false
@@ -27,7 +34,7 @@ final class CountryCityCardView: BaseCardView, TripCreationCardUpdating {
     }()
 
     private lazy var rowsStackView: UIStackView = {
-        let stack = UIStackView(arrangedSubviews: [countryRow, cityRow])
+        let stack = UIStackView(arrangedSubviews: [departureCityRow, countryRow, cityRow])
         stack.axis = .vertical
         stack.spacing = WraithSpacing.space12
         stack.translatesAutoresizingMaskIntoConstraints = false
@@ -37,6 +44,7 @@ final class CountryCityCardView: BaseCardView, TripCreationCardUpdating {
     // MARK: - Properties
 
     private let viewModel: TripCreationViewModel
+    private var loadedDepartureCities: [City] = []
     private var loadedCountries: [Country] = []
     private var loadedCities: [City] = []
     private weak var presentedListController: SelectionListViewController?
@@ -45,7 +53,7 @@ final class CountryCityCardView: BaseCardView, TripCreationCardUpdating {
 
     init(viewModel: TripCreationViewModel) {
         self.viewModel = viewModel
-        super.init(title: "Nereye gitmek istersin?", iconSystemName: "globe")
+        super.init(title: "Nereden, nereye gitmek istersin?", iconSystemName: "globe")
         setupLayout()
         update(with: viewModel.draft)
     }
@@ -63,6 +71,7 @@ final class CountryCityCardView: BaseCardView, TripCreationCardUpdating {
             rowsStackView.leadingAnchor.constraint(equalTo: contentContainerView.leadingAnchor),
             rowsStackView.trailingAnchor.constraint(equalTo: contentContainerView.trailingAnchor),
             rowsStackView.bottomAnchor.constraint(equalTo: contentContainerView.bottomAnchor),
+            departureCityRow.heightAnchor.constraint(equalToConstant: 52),
             countryRow.heightAnchor.constraint(equalToConstant: 52),
             cityRow.heightAnchor.constraint(equalToConstant: 52)
         ])
@@ -71,6 +80,12 @@ final class CountryCityCardView: BaseCardView, TripCreationCardUpdating {
     // MARK: - Binding
 
     func update(with draft: TripCreationDraft) {
+        if let departureCity = draft.selectedDepartureCity {
+            departureCityRow.setTitle(departureCity.name, isPlaceholder: false)
+        } else {
+            departureCityRow.setTitle("Kalkış şehri seç", isPlaceholder: true)
+        }
+
         if let country = draft.selectedCountry {
             countryRow.setTitle(country.name, isPlaceholder: false)
             countryRow.setFlag(url: country.flagURL)
@@ -89,6 +104,25 @@ final class CountryCityCardView: BaseCardView, TripCreationCardUpdating {
     }
 
     // MARK: - Actions
+
+    @objc private func didTapDepartureCityRow() {
+        presentSelectionList(title: "Kalkış Şehri Seç") { [weak self] item in
+            guard let self, let city = self.loadedDepartureCities.first(where: { $0.name == item.title }) else { return }
+            self.viewModel.selectDepartureCity(city)
+        }
+
+        Task { [weak self] in
+            guard let self else { return }
+            do {
+                let cities = try await self.viewModel.loadDepartureCities()
+                self.loadedDepartureCities = cities
+                self.presentedListController?.setItems(cities.map { SelectionListViewController.Item(title: $0.name, flagURL: nil) })
+            } catch {
+                self.presentedListController?.setItems([])
+            }
+            self.presentedListController?.setLoading(false)
+        }
+    }
 
     @objc private func didTapCountryRow() {
         presentSelectionList(title: "Ülke Seç") { [weak self] item in

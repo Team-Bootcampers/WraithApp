@@ -19,7 +19,6 @@ final class TripCreationViewModel {
 
     private let minimumTravelerCount = 1
     private let countryCityService: CountryCityServiceProtocol
-    private let ticketPriceService: TicketPriceServiceProtocol
     private let hotelService: HotelServiceProtocol
     private let placeService: PlaceServiceProtocol
     private let restaurantService: RestaurantServiceProtocol
@@ -33,10 +32,10 @@ final class TripCreationViewModel {
     var travelerCount: Int { draft.travelerCount }
     var startDate: Date? { draft.startDate }
     var endDate: Date? { draft.endDate }
+    var selectedDepartureCity: City? { draft.selectedDepartureCity }
     var selectedCountry: Country? { draft.selectedCountry }
     var selectedCity: City? { draft.selectedCity }
     var selectedTransportType: TransportType { draft.selectedTransportType }
-    var ticketPrice: TicketPrice? { draft.ticketPrice }
     var hotels: [Hotel] { draft.hotels }
     var places: [Place] { draft.places }
     var restaurants: [Restaurant] { draft.restaurants }
@@ -50,13 +49,11 @@ final class TripCreationViewModel {
 
     init(
         countryCityService: CountryCityServiceProtocol = CountryCityService(),
-        ticketPriceService: TicketPriceServiceProtocol = MockTicketPriceService(),
         hotelService: HotelServiceProtocol = MockHotelService(),
         placeService: PlaceServiceProtocol = MockPlaceService(),
         restaurantService: RestaurantServiceProtocol = MockRestaurantService()
     ) {
         self.countryCityService = countryCityService
-        self.ticketPriceService = ticketPriceService
         self.hotelService = hotelService
         self.placeService = placeService
         self.restaurantService = restaurantService
@@ -93,14 +90,12 @@ final class TripCreationViewModel {
         if let endDate = draft.endDate, endDate <= date {
             draft.endDate = nil
         }
-        refreshTicketPriceIfPossible()
     }
 
     @discardableResult
     func selectEndDate(_ date: Date) -> Bool {
         guard let startDate = draft.startDate, date > startDate else { return false }
         draft.endDate = date
-        refreshTicketPriceIfPossible()
         return true
     }
 
@@ -116,6 +111,9 @@ final class TripCreationViewModel {
         pendingPlaceSelectionIDs = snapshot.selectedPlaceIDs
         pendingRestaurantSelectionIDs = snapshot.selectedRestaurantIDs
 
+        if let departureCityName = snapshot.departureCityName {
+            selectDepartureCity(City(name: departureCityName))
+        }
         if let country = snapshot.country {
             selectCountry(country)
         }
@@ -137,6 +135,8 @@ final class TripCreationViewModel {
 
     // MARK: - Country & City
 
+    private static let departureCountryName = "Turkey"
+
     func loadCountries() async throws -> [Country] {
         try await countryCityService.fetchCountries()
     }
@@ -145,10 +145,19 @@ final class TripCreationViewModel {
         try await countryCityService.fetchCities(for: country.name)
     }
 
+    /// Departure is always domestic, so there's no need to make the traveler pick a
+    /// departure country too — just the city, scoped to Turkey.
+    func loadDepartureCities() async throws -> [City] {
+        try await countryCityService.fetchCities(for: Self.departureCountryName)
+    }
+
+    func selectDepartureCity(_ city: City) {
+        draft.selectedDepartureCity = city
+    }
+
     func selectCountry(_ country: Country) {
         draft.selectedCountry = country
         draft.selectedCity = nil
-        refreshTicketPriceIfPossible()
         refreshHotelsIfPossible()
         refreshPlacesIfPossible()
         refreshRestaurantsIfPossible()
@@ -156,42 +165,15 @@ final class TripCreationViewModel {
 
     func selectCity(_ city: City) {
         draft.selectedCity = city
-        refreshTicketPriceIfPossible()
         refreshHotelsIfPossible()
         refreshPlacesIfPossible()
         refreshRestaurantsIfPossible()
     }
 
-    // MARK: - Transport & Ticket Price
+    // MARK: - Transport
 
     func selectTransportType(_ transportType: TransportType) {
         draft.selectedTransportType = transportType
-        refreshTicketPriceIfPossible()
-    }
-
-    private func refreshTicketPriceIfPossible() {
-        guard let city = draft.selectedCity?.name, let startDate = draft.startDate, let endDate = draft.endDate else {
-            draft.ticketPrice = nil
-            return
-        }
-
-        let transportType = draft.selectedTransportType
-        draft.ticketPrice = nil
-
-        Task { [weak self] in
-            guard let self else { return }
-            let price = try? await self.ticketPriceService.fetchPrice(
-                transportType: transportType,
-                city: city,
-                startDate: startDate,
-                endDate: endDate
-            )
-            guard self.draft.selectedTransportType == transportType,
-                  self.draft.selectedCity?.name == city,
-                  self.draft.startDate == startDate,
-                  self.draft.endDate == endDate else { return }
-            self.draft.ticketPrice = price
-        }
     }
 
     // MARK: - Hotels

@@ -18,20 +18,17 @@ final class SmartItineraryPlanner {
     private let hotelService: HotelServiceProtocol
     private let placeService: PlaceServiceProtocol
     private let restaurantService: RestaurantServiceProtocol
-    private let ticketPriceService: TicketPriceServiceProtocol
 
     // MARK: - Init
 
     init(
         hotelService: HotelServiceProtocol = MockHotelService(),
         placeService: PlaceServiceProtocol = MockPlaceService(),
-        restaurantService: RestaurantServiceProtocol = MockRestaurantService(),
-        ticketPriceService: TicketPriceServiceProtocol = MockTicketPriceService()
+        restaurantService: RestaurantServiceProtocol = MockRestaurantService()
     ) {
         self.hotelService = hotelService
         self.placeService = placeService
         self.restaurantService = restaurantService
-        self.ticketPriceService = ticketPriceService
     }
 
     // MARK: - Planning
@@ -86,26 +83,20 @@ final class SmartItineraryPlanner {
         async let hotelsTask = loadHotels(city: city)
         async let placesTask = loadPlaces(city: city)
         async let restaurantsTask = loadRestaurants(city: city)
-        async let ticketPriceTask = loadTicketPrice(
-            transportType: transportType,
-            city: city,
-            startDate: startDate,
-            endDate: endDate
-        )
 
-        let (hotels, places, restaurants, ticketPrice) = await (hotelsTask, placesTask, restaurantsTask, ticketPriceTask)
+        let (hotels, places, restaurants) = await (hotelsTask, placesTask, restaurantsTask)
 
         let selectedHotel = Self.pickHotel(from: hotels, persona: persona)
 
         return TripStopSnapshot(
             stopNumber: stopNumber,
+            departureCityName: nil,
             country: destination.country,
             cityName: city,
             travelerCount: travelerCount,
             startDate: startDate,
             endDate: endDate,
             transportType: transportType,
-            ticketPrice: ticketPrice,
             hotels: hotels,
             selectedHotelIDs: Set([selectedHotel?.id].compactMap { $0 }),
             places: places,
@@ -127,15 +118,6 @@ final class SmartItineraryPlanner {
 
     private func loadRestaurants(city: String) async -> [Restaurant] {
         (try? await restaurantService.fetchRestaurants(city: city)) ?? []
-    }
-
-    private func loadTicketPrice(transportType: TransportType, city: String, startDate: Date, endDate: Date) async -> TicketPrice? {
-        try? await ticketPriceService.fetchPrice(
-            transportType: transportType,
-            city: city,
-            startDate: startDate,
-            endDate: endDate
-        )
     }
 
     // MARK: - Persona Rules

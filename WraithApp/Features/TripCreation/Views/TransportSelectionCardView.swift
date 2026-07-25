@@ -5,6 +5,7 @@
 //  Created by Onur on 25.07.2026.
 //
 
+import SafariServices
 import UIKit
 
 final class TransportSelectionCardView: BaseCardView, TripCreationCardUpdating {
@@ -28,16 +29,16 @@ final class TransportSelectionCardView: BaseCardView, TripCreationCardUpdating {
         return stack
     }()
 
-    private lazy var priceRowView: TicketPriceRowView = {
-        let view = TicketPriceRowView()
+    private lazy var ticketSearchRowView: TicketSearchRowView = {
+        let view = TicketSearchRowView()
         view.translatesAutoresizingMaskIntoConstraints = false
         view.isUserInteractionEnabled = true
-        view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(didTapPriceRow)))
+        view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(didTapTicketSearchRow)))
         return view
     }()
 
     private lazy var contentStackView: UIStackView = {
-        let stack = UIStackView(arrangedSubviews: [optionsStackView, priceRowView])
+        let stack = UIStackView(arrangedSubviews: [optionsStackView, ticketSearchRowView])
         stack.axis = .vertical
         stack.spacing = WraithSpacing.space16
         stack.translatesAutoresizingMaskIntoConstraints = false
@@ -71,7 +72,7 @@ final class TransportSelectionCardView: BaseCardView, TripCreationCardUpdating {
             contentStackView.trailingAnchor.constraint(equalTo: contentContainerView.trailingAnchor),
             contentStackView.bottomAnchor.constraint(equalTo: contentContainerView.bottomAnchor),
             optionsStackView.heightAnchor.constraint(equalToConstant: 72),
-            priceRowView.heightAnchor.constraint(equalToConstant: 52)
+            ticketSearchRowView.heightAnchor.constraint(equalToConstant: 52)
         ])
     }
 
@@ -80,14 +81,14 @@ final class TransportSelectionCardView: BaseCardView, TripCreationCardUpdating {
     func update(with draft: TripCreationDraft) {
         optionViews.forEach { $0.setSelected($0.transportType == draft.selectedTransportType) }
 
-        priceRowView.setIcon(systemName: draft.selectedTransportType.departureIconName)
+        ticketSearchRowView.setIcon(systemName: draft.selectedTransportType.departureIconName)
 
-        if let ticketPrice = draft.ticketPrice, ticketPrice.transportType == draft.selectedTransportType {
-            priceRowView.setTitle("\(ticketPrice.minPrice) \(ticketPrice.currency)'den başlayan fiyatlarla")
+        if draft.selectedDepartureCity == nil {
+            ticketSearchRowView.setTitle("Bilet için kalkış şehrini de seçin")
         } else if draft.selectedCity == nil || draft.startDate == nil || draft.endDate == nil {
-            priceRowView.setTitle("Fiyat için şehir ve tarih seçin")
+            ticketSearchRowView.setTitle("Bilet aramak için şehir ve tarih seçin")
         } else {
-            priceRowView.setTitle("Fiyatlar yükleniyor...")
+            ticketSearchRowView.setTitle("Bileti Görüntüle")
         }
     }
 
@@ -98,21 +99,38 @@ final class TransportSelectionCardView: BaseCardView, TripCreationCardUpdating {
         viewModel.selectTransportType(optionView.transportType)
     }
 
-    @objc private func didTapPriceRow() {
-        guard viewModel.selectedCity != nil, viewModel.startDate != nil, viewModel.endDate != nil else { return }
+    @objc private func didTapTicketSearchRow() {
         guard let presenter = ParentViewController else { return }
 
-        let ticketListViewController = TicketListViewController(
-            city: viewModel.selectedCity?.name,
-            startDate: viewModel.startDate,
-            endDate: viewModel.endDate
-        )
-
-        if let navigationController = presenter.navigationController {
-            navigationController.pushViewController(ticketListViewController, animated: true)
-        } else {
-            presenter.present(UINavigationController(rootViewController: ticketListViewController), animated: true)
+        guard let departureCity = viewModel.selectedDepartureCity?.name else {
+            presentMissingDepartureAlert(from: presenter)
+            return
         }
+
+        guard
+            let destinationCity = viewModel.selectedCity?.name,
+            let startDate = viewModel.startDate,
+            viewModel.endDate != nil
+        else { return }
+
+        guard let url = TicketSearchURLBuilder.url(
+            for: viewModel.selectedTransportType,
+            departureCity: departureCity,
+            destinationCity: destinationCity,
+            date: startDate
+        ) else { return }
+
+        presenter.present(SFSafariViewController(url: url), animated: true)
+    }
+
+    private func presentMissingDepartureAlert(from presenter: UIViewController) {
+        let alert = UIAlertController(
+            title: "Kalkış şehri gerekiyor",
+            message: "Bilet aramak için önce yukarıdan kalkış şehrini seçmelisin.",
+            preferredStyle: .alert
+        )
+        alert.addAction(UIAlertAction(title: "Tamam", style: .default))
+        presenter.present(alert, animated: true)
     }
 }
 
@@ -205,9 +223,9 @@ private final class TransportOptionView: UIView {
     }
 }
 
-// MARK: - TicketPriceRowView
+// MARK: - TicketSearchRowView
 
-private final class TicketPriceRowView: UIView {
+private final class TicketSearchRowView: UIView {
 
     // MARK: - UI Components
 

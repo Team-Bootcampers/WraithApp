@@ -244,7 +244,9 @@ private final class TripStopSummaryCardView: BaseCardView {
         var infoRows: [UIView] = []
 
         if let country = stop.country, let cityName = stop.cityName {
-            infoRows.append(SummaryInfoRow(iconSystemName: "location.fill", text: "\(cityName), \(country.name)"))
+            let destinationText = "\(cityName), \(country.name)"
+            let locationText = stop.departureCityName.map { "\($0) → \(destinationText)" } ?? destinationText
+            infoRows.append(SummaryInfoRow(iconSystemName: "location.fill", text: locationText))
         }
 
         if let startDate = stop.startDate, let endDate = stop.endDate {
@@ -254,14 +256,7 @@ private final class TripStopSummaryCardView: BaseCardView {
 
         infoRows.append(SummaryInfoRow(iconSystemName: "person.2.fill", text: "\(stop.travelerCount) Kişi"))
 
-        if let ticketPrice = stop.ticketPrice {
-            infoRows.append(SummaryInfoRow(
-                iconSystemName: stop.transportType.departureIconName,
-                text: "\(stop.transportType.title) — \(ticketPrice.minPrice) \(ticketPrice.currency)'den başlayan"
-            ))
-        } else {
-            infoRows.append(SummaryInfoRow(iconSystemName: stop.transportType.departureIconName, text: stop.transportType.title))
-        }
+        infoRows.append(SummaryInfoRow(iconSystemName: stop.transportType.departureIconName, text: stop.transportType.title))
 
         infoRows.append(SummaryInfoRow(iconSystemName: "turkishlirasign.circle.fill", text: "Bu Durağın Maliyeti: \(cost) TL", isEmphasized: true))
 

@@ -9,13 +9,13 @@ import Foundation
 
 struct TripStopSnapshot: Codable {
     let stopNumber: Int
+    let departureCityName: String?
     let country: Country?
     let cityName: String?
     let travelerCount: Int
     let startDate: Date?
     let endDate: Date?
     let transportType: TransportType
-    let ticketPrice: TicketPrice?
     let hotels: [Hotel]
     let selectedHotelIDs: Set<String>
     let places: [Place]

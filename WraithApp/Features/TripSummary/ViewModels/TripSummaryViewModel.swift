@@ -28,12 +28,7 @@ final class TripSummaryViewModel {
     // MARK: - Cost Calculation
 
     func totalCost(for stop: TripStopSnapshot) -> Int {
-        transportCost(for: stop) + hotelCost(for: stop) + placesCost(for: stop) + restaurantsCost(for: stop)
-    }
-
-    func transportCost(for stop: TripStopSnapshot) -> Int {
-        guard let ticketPrice = stop.ticketPrice else { return 0 }
-        return ticketPrice.minPrice * stop.travelerCount
+        hotelCost(for: stop) + placesCost(for: stop) + restaurantsCost(for: stop)
     }
 
     func hotelCost(for stop: TripStopSnapshot) -> Int {

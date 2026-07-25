@@ -11,10 +11,10 @@ struct TripCreationDraft {
     var travelerCount: Int = 1
     var startDate: Date?
     var endDate: Date?
+    var selectedDepartureCity: City?
     var selectedCountry: Country?
     var selectedCity: City?
     var selectedTransportType: TransportType = .airplane
-    var ticketPrice: TicketPrice?
     var hotels: [Hotel] = []
     var selectedHotelIDs: Set<String> = []
     var places: [Place] = []
