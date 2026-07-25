@@ -1,0 +1,288 @@
+//
+//  TransportSelectionCardView.swift
+//  WraithApp
+//
+//  Created by Onur on 25.07.2026.
+//
+
+import UIKit
+
+final class TransportSelectionCardView: BaseCardView, TripCreationCardUpdating {
+
+    // MARK: - UI Components
+
+    private lazy var optionViews: [TransportOptionView] = TransportType.allCases.map { transportType in
+        let optionView = TransportOptionView(transportType: transportType)
+        optionView.translatesAutoresizingMaskIntoConstraints = false
+        optionView.isUserInteractionEnabled = true
+        optionView.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(didTapOption(_:))))
+        return optionView
+    }
+
+    private lazy var optionsStackView: UIStackView = {
+        let stack = UIStackView(arrangedSubviews: optionViews)
+        stack.axis = .horizontal
+        stack.distribution = .fillEqually
+        stack.spacing = 12
+        stack.translatesAutoresizingMaskIntoConstraints = false
+        return stack
+    }()
+
+    private lazy var priceRowView: TicketPriceRowView = {
+        let view = TicketPriceRowView()
+        view.translatesAutoresizingMaskIntoConstraints = false
+        view.isUserInteractionEnabled = true
+        view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(didTapPriceRow)))
+        return view
+    }()
+
+    private lazy var contentStackView: UIStackView = {
+        let stack = UIStackView(arrangedSubviews: [optionsStackView, priceRowView])
+        stack.axis = .vertical
+        stack.spacing = 16
+        stack.translatesAutoresizingMaskIntoConstraints = false
+        return stack
+    }()
+
+    // MARK: - Properties
+
+    private let viewModel: TripCreationViewModel
+
+    // MARK: - Init
+
+    init(viewModel: TripCreationViewModel) {
+        self.viewModel = viewModel
+        super.init(title: "Nasıl gitmek istersin?", iconSystemName: "arrow.triangle.swap")
+        setupLayout()
+        update(with: viewModel.draft)
+    }
+
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    // MARK: - Setup
+
+    private func setupLayout() {
+        contentContainerView.addSubview(contentStackView)
+        NSLayoutConstraint.activate([
+            contentStackView.topAnchor.constraint(equalTo: contentContainerView.topAnchor),
+            contentStackView.leadingAnchor.constraint(equalTo: contentContainerView.leadingAnchor),
+            contentStackView.trailingAnchor.constraint(equalTo: contentContainerView.trailingAnchor),
+            contentStackView.bottomAnchor.constraint(equalTo: contentContainerView.bottomAnchor),
+            optionsStackView.heightAnchor.constraint(equalToConstant: 72),
+            priceRowView.heightAnchor.constraint(equalToConstant: 52)
+        ])
+    }
+
+    // MARK: - Binding
+
+    func update(with draft: TripCreationDraft) {
+        optionViews.forEach { $0.setSelected($0.transportType == draft.selectedTransportType) }
+
+        priceRowView.setIcon(systemName: draft.selectedTransportType.departureIconName)
+
+        if let ticketPrice = draft.ticketPrice, ticketPrice.transportType == draft.selectedTransportType {
+            priceRowView.setTitle("\(ticketPrice.minPrice) \(ticketPrice.currency)'den başlayan fiyatlarla")
+        } else if draft.selectedCity == nil || draft.startDate == nil || draft.endDate == nil {
+            priceRowView.setTitle("Fiyat için şehir ve tarih seçin")
+        } else {
+            priceRowView.setTitle("Fiyatlar yükleniyor...")
+        }
+    }
+
+    // MARK: - Actions
+
+    @objc private func didTapOption(_ gesture: UITapGestureRecognizer) {
+        guard let optionView = gesture.view as? TransportOptionView else { return }
+        viewModel.selectTransportType(optionView.transportType)
+    }
+
+    @objc private func didTapPriceRow() {
+        guard viewModel.selectedCity != nil, viewModel.startDate != nil, viewModel.endDate != nil else { return }
+        guard let presenter = ParentViewController else { return }
+
+        let ticketListViewController = TicketListViewController(
+            city: viewModel.selectedCity?.name,
+            startDate: viewModel.startDate,
+            endDate: viewModel.endDate
+        )
+
+        if let navigationController = presenter.navigationController {
+            navigationController.pushViewController(ticketListViewController, animated: true)
+        } else {
+            presenter.present(UINavigationController(rootViewController: ticketListViewController), animated: true)
+        }
+    }
+}
+
+// MARK: - TransportOptionView
+
+private final class TransportOptionView: UIView {
+
+    // MARK: - UI Components
+
+    private lazy var iconContainerView: UIView = {
+        let view = UIView()
+        view.backgroundColor = .tertiarySystemGroupedBackground
+        view.layer.cornerRadius = 24
+        view.translatesAutoresizingMaskIntoConstraints = false
+        return view
+    }()
+
+    private lazy var iconImageView: UIImageView = {
+        let imageView = UIImageView()
+        imageView.contentMode = .scaleAspectFit
+        imageView.tintColor = .label
+        imageView.translatesAutoresizingMaskIntoConstraints = false
+        return imageView
+    }()
+
+    private lazy var titleLabel: UILabel = {
+        let label = UILabel()
+        label.font = .systemFont(ofSize: 12, weight: .regular)
+        label.textColor = .secondaryLabel
+        label.textAlignment = .center
+        label.translatesAutoresizingMaskIntoConstraints = false
+        return label
+    }()
+
+    private lazy var contentStackView: UIStackView = {
+        let stack = UIStackView(arrangedSubviews: [iconContainerView, titleLabel])
+        stack.axis = .vertical
+        stack.alignment = .center
+        stack.spacing = 6
+        stack.translatesAutoresizingMaskIntoConstraints = false
+        return stack
+    }()
+
+    // MARK: - Properties
+
+    let transportType: TransportType
+
+    // MARK: - Init
+
+    init(transportType: TransportType) {
+        self.transportType = transportType
+        super.init(frame: .zero)
+        iconImageView.image = UIImage(systemName: transportType.iconName)
+        titleLabel.text = transportType.title
+        setupLayout()
+    }
+
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    // MARK: - Setup
+
+    private func setupLayout() {
+        addSubview(contentStackView)
+        iconContainerView.addSubview(iconImageView)
+        NSLayoutConstraint.activate([
+            contentStackView.topAnchor.constraint(equalTo: topAnchor),
+            contentStackView.bottomAnchor.constraint(equalTo: bottomAnchor),
+            contentStackView.centerXAnchor.constraint(equalTo: centerXAnchor),
+            iconContainerView.widthAnchor.constraint(equalToConstant: 48),
+            iconContainerView.heightAnchor.constraint(equalToConstant: 48),
+            iconImageView.centerXAnchor.constraint(equalTo: iconContainerView.centerXAnchor),
+            iconImageView.centerYAnchor.constraint(equalTo: iconContainerView.centerYAnchor),
+            iconImageView.widthAnchor.constraint(equalToConstant: 22),
+            iconImageView.heightAnchor.constraint(equalToConstant: 22)
+        ])
+    }
+
+    // MARK: - Public
+
+    func setSelected(_ selected: Bool) {
+        UIView.animate(withDuration: 0.35, delay: 0, usingSpringWithDamping: 0.6, initialSpringVelocity: 0.5, options: [.curveEaseInOut]) {
+            self.iconContainerView.backgroundColor = selected ? AppTheme.accent : .tertiarySystemGroupedBackground
+            self.iconImageView.tintColor = selected ? .white : .label
+            self.titleLabel.textColor = selected ? .label : .secondaryLabel
+            self.titleLabel.font = .systemFont(ofSize: 12, weight: selected ? .semibold : .regular)
+            self.iconContainerView.transform = selected ? CGAffineTransform(scaleX: 1.08, y: 1.08) : .identity
+        }
+    }
+}
+
+// MARK: - TicketPriceRowView
+
+private final class TicketPriceRowView: UIView {
+
+    // MARK: - UI Components
+
+    private lazy var iconImageView: UIImageView = {
+        let imageView = UIImageView()
+        imageView.tintColor = AppTheme.accent
+        imageView.contentMode = .scaleAspectFit
+        imageView.translatesAutoresizingMaskIntoConstraints = false
+        return imageView
+    }()
+
+    private lazy var titleLabel: UILabel = {
+        let label = UILabel()
+        label.font = .systemFont(ofSize: 15, weight: .medium)
+        label.textColor = .label
+        label.translatesAutoresizingMaskIntoConstraints = false
+        return label
+    }()
+
+    private lazy var chevronImageView: UIImageView = {
+        let imageView = UIImageView(image: UIImage(systemName: "chevron.right"))
+        imageView.tintColor = .tertiaryLabel
+        imageView.contentMode = .scaleAspectFit
+        imageView.translatesAutoresizingMaskIntoConstraints = false
+        return imageView
+    }()
+
+    private lazy var contentStackView: UIStackView = {
+        let stack = UIStackView(arrangedSubviews: [iconImageView, titleLabel, chevronImageView])
+        stack.axis = .horizontal
+        stack.alignment = .center
+        stack.spacing = 12
+        stack.translatesAutoresizingMaskIntoConstraints = false
+        return stack
+    }()
+
+    // MARK: - Init
+
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        setupAppearance()
+        setupLayout()
+    }
+
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    // MARK: - Setup
+
+    private func setupAppearance() {
+        backgroundColor = .tertiarySystemGroupedBackground
+        layer.cornerRadius = 12
+    }
+
+    private func setupLayout() {
+        addSubview(contentStackView)
+        NSLayoutConstraint.activate([
+            contentStackView.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 12),
+            contentStackView.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -12),
+            contentStackView.centerYAnchor.constraint(equalTo: centerYAnchor),
+            iconImageView.widthAnchor.constraint(equalToConstant: 22),
+            iconImageView.heightAnchor.constraint(equalToConstant: 22),
+            chevronImageView.widthAnchor.constraint(equalToConstant: 14),
+            chevronImageView.heightAnchor.constraint(equalToConstant: 14)
+        ])
+    }
+
+    // MARK: - Public
+
+    func setIcon(systemName: String) {
+        iconImageView.image = UIImage(systemName: systemName)
+    }
+
+    func setTitle(_ text: String) {
+        titleLabel.text = text
+    }
+}

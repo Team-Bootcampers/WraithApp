@@ -30,10 +30,8 @@ final class AppCoordinator: Coordinator {
     // MARK: - Coordinator
 
     func start() {
-        
-        let rootVC = ViewController()
+        let rootVC = TripCreationViewController()
         window.rootViewController = rootVC
         window.makeKeyAndVisible()
-         
     }
 }
