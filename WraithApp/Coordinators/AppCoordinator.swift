@@ -63,6 +63,7 @@ final class AppCoordinator: Coordinator {
             // The user explicitly declined to finish onboarding this time, so drop any
             // previously-saved answers rather than letting stale data get synced on next login.
             QuizAnswerStore.shared.clear()
+            TravelPersonalityStore.clear()
             self?.showMain()
         }
 
@@ -135,6 +136,8 @@ final class AppCoordinator: Coordinator {
         _ = await minimumDisplayDuration
 
         guard !analysis.isEmpty else { throw CharacterAnalysisError.emptyAnalysis }
+
+        TravelPersonalityStore.save(analysis)
 
         // Title/summary/insight-label copy is just short, deterministic UI chrome around the
         // AI's write-up (the backend doesn't return them) — not a substitute analysis.

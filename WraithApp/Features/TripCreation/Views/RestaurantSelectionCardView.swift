@@ -121,7 +121,9 @@ final class RestaurantSelectionCardView: BaseCardView, TripCreationCardUpdating 
         let restaurants = draft.restaurants
 
         if restaurants.isEmpty {
-            placeholderLabel.text = "Restoranlar yükleniyor..."
+            placeholderLabel.text = draft.isLoadingRestaurants
+                ? "Restoranlar yükleniyor..."
+                : (draft.restaurantsUnavailableReason ?? "Restoranlar yükleniyor...")
             placeholderLabel.isHidden = false
             itemsScrollView.isHidden = true
         } else {

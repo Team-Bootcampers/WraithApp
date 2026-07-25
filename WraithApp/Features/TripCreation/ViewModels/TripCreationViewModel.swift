@@ -51,7 +51,7 @@ final class TripCreationViewModel {
         countryCityService: CountryCityServiceProtocol = CountryCityService(),
         hotelService: HotelServiceProtocol = MockHotelService(),
         placeService: PlaceServiceProtocol = MockPlaceService(),
-        restaurantService: RestaurantServiceProtocol = MockRestaurantService()
+        restaurantService: RestaurantServiceProtocol = RestaurantService()
     ) {
         self.countryCityService = countryCityService
         self.hotelService = hotelService
@@ -243,23 +243,48 @@ final class TripCreationViewModel {
     // MARK: - Restaurants
 
     private func refreshRestaurantsIfPossible() {
-        guard let city = draft.selectedCity?.name else {
-            draft.restaurants = []
-            draft.selectedRestaurantIDs = []
+        draft.restaurants = []
+        draft.selectedRestaurantIDs = []
+        draft.isLoadingRestaurants = false
+        draft.restaurantsUnavailableReason = nil
+
+        guard let country = draft.selectedCountry?.name, let city = draft.selectedCity?.name else {
             return
         }
 
-        draft.restaurants = []
-        draft.selectedRestaurantIDs = []
+        guard let personalityAnalysis = TravelPersonalityStore.current else {
+            draft.restaurantsUnavailableReason = "Restoran önerisi için önce karakter analizini tamamlaman gerekiyor."
+            return
+        }
+
+        draft.isLoadingRestaurants = true
 
         Task { [weak self] in
             guard let self else { return }
-            let restaurants = (try? await self.restaurantService.fetchRestaurants(city: city)) ?? []
-            guard self.draft.selectedCity?.name == city else { return }
-            self.draft.restaurants = restaurants
-            if let pending = self.pendingRestaurantSelectionIDs {
-                self.draft.selectedRestaurantIDs = pending.intersection(restaurants.map(\.id))
-                self.pendingRestaurantSelectionIDs = nil
+            do {
+                let restaurants = try await self.restaurantService.fetchRestaurants(
+                    country: country,
+                    city: city,
+                    personalityAnalysis: personalityAnalysis
+                )
+                guard self.draft.selectedCity?.name == city else { return }
+                self.draft.isLoadingRestaurants = false
+                self.draft.restaurants = restaurants
+                if restaurants.isEmpty {
+                    self.draft.restaurantsUnavailableReason = "Bu şehir için restoran önerisi bulunamadı."
+                }
+                if let pending = self.pendingRestaurantSelectionIDs {
+                    self.draft.selectedRestaurantIDs = pending.intersection(restaurants.map(\.id))
+                    self.pendingRestaurantSelectionIDs = nil
+                }
+            } catch {
+                guard self.draft.selectedCity?.name == city else { return }
+                // Surfaced in the console since there's no in-app diagnostics — check here
+                // first (401 → auth, decoding error → DTO/response mismatch, etc.) if this
+                // still shows up as "unavailable" in the UI.
+                print("⚠️ RestaurantService.fetchRestaurants failed: \(error)")
+                self.draft.isLoadingRestaurants = false
+                self.draft.restaurantsUnavailableReason = "Restoranlar yüklenemedi. Lütfen tekrar dene."
             }
         }
     }

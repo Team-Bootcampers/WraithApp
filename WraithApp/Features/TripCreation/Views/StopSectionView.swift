@@ -40,7 +40,7 @@ final class StopSectionView: BaseCardView {
         let deleteButton = UIButton(type: .system)
         var deleteConfiguration = UIButton.Configuration.plain()
         deleteConfiguration.image = UIImage(systemName: "trash")
-        deleteConfiguration.baseForegroundColor = .systemRed
+        deleteConfiguration.baseForegroundColor = .wraithError
         deleteConfiguration.contentInsets = NSDirectionalEdgeInsets(top: WraithSpacing.space10, leading: WraithSpacing.space10, bottom: WraithSpacing.space10, trailing: WraithSpacing.space10)
         deleteButton.configuration = deleteConfiguration
         deleteButton.isHidden = true

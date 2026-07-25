@@ -13,7 +13,7 @@ final class MockRestaurantService: RestaurantServiceProtocol {
     private static let ratings = [4.4, 4.7, 4.2, 4.5, 3.9]
     private static let averagePrices = [350, 600, 250, 500, 300]
 
-    func fetchRestaurants(city: String) async throws -> [Restaurant] {
+    func fetchRestaurants(country: String, city: String, personalityAnalysis: String) async throws -> [Restaurant] {
         try await Task.sleep(nanoseconds: 500_000_000)
 
         let citySlug = city.folding(options: .diacriticInsensitive, locale: .current).replacingOccurrences(of: " ", with: "")

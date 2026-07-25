@@ -31,7 +31,7 @@ final class PopularTripCell: UITableViewCell {
     private lazy var imageContainerView: UIView = {
         let view = UIView()
         view.layer.cornerRadius = WraithRadius.radius24
-        view.layer.borderWidth = 1
+        view.layer.borderWidth = WraithBorderWidth.hairline
         view.layer.borderColor = UIColor.wraithOutline.withAlphaComponent(0.4).cgColor
         view.clipsToBounds = true
         view.translatesAutoresizingMaskIntoConstraints = false
@@ -41,10 +41,10 @@ final class PopularTripCell: UITableViewCell {
     private lazy var favoriteButton: UIButton = {
         var configuration = UIButton.Configuration.plain()
         configuration.image = UIImage(systemName: "heart")
-        configuration.baseForegroundColor = .white
+        configuration.baseForegroundColor = .wraithOnPrimary
         let button = UIButton(configuration: configuration)
-        button.backgroundColor = UIColor.black.withAlphaComponent(0.28)
-        button.layer.cornerRadius = 18
+        button.backgroundColor = .wraithPhotoScrimLight
+        button.layer.cornerRadius = WraithRadius.radius18
         button.translatesAutoresizingMaskIntoConstraints = false
         button.addTarget(self, action: #selector(didTapFavorite), for: .touchUpInside)
         return button
@@ -53,7 +53,7 @@ final class PopularTripCell: UITableViewCell {
     private lazy var titleLabel: UILabel = {
         let label = UILabel()
         label.font = .systemFont(ofSize: 20, weight: .bold)
-        label.textColor = .white
+        label.textColor = .wraithOnPrimary
         label.numberOfLines = 2
         label.translatesAutoresizingMaskIntoConstraints = false
         return label
@@ -72,7 +72,7 @@ final class PopularTripCell: UITableViewCell {
     private lazy var ratingLabel: UILabel = {
         let label = UILabel()
         label.font = .systemFont(ofSize: 14, weight: .semibold)
-        label.textColor = .white
+        label.textColor = .wraithOnPrimary
         label.setContentHuggingPriority(.required, for: .horizontal)
         label.setContentCompressionResistancePriority(.required, for: .horizontal)
         label.translatesAutoresizingMaskIntoConstraints = false
@@ -82,7 +82,7 @@ final class PopularTripCell: UITableViewCell {
     private lazy var reviewCountLabel: UILabel = {
         let label = UILabel()
         label.font = .systemFont(ofSize: 13, weight: .regular)
-        label.textColor = UIColor.white.withAlphaComponent(0.8)
+        label.textColor = UIColor.wraithOnPrimary.withAlphaComponent(0.8)
         label.setContentHuggingPriority(.required, for: .horizontal)
         label.setContentCompressionResistancePriority(.required, for: .horizontal)
         label.translatesAutoresizingMaskIntoConstraints = false
@@ -266,7 +266,7 @@ final class PopularTripCell: UITableViewCell {
         // the cell last displayed, so state changes on reuse/configure apply instantly.
         UIView.performWithoutAnimation {
             favoriteButton.configuration?.image = UIImage(systemName: isFavorite ? "heart.fill" : "heart")
-            favoriteButton.configuration?.baseForegroundColor = isFavorite ? .wraithPrimary : .white
+            favoriteButton.configuration?.baseForegroundColor = isFavorite ? .wraithPrimary : .wraithOnPrimary
             favoriteButton.layoutIfNeeded()
         }
     }
@@ -299,7 +299,7 @@ private final class BottomShadowGradientView: UIView {
 
     override init(frame: CGRect) {
         super.init(frame: frame)
-        gradientLayer.colors = [UIColor.clear.cgColor, UIColor.black.withAlphaComponent(0.78).cgColor]
+        gradientLayer.colors = [UIColor.clear.cgColor, UIColor.wraithPhotoScrimHeavy.cgColor]
         gradientLayer.locations = [0, 1]
         gradientLayer.startPoint = CGPoint(x: 0.5, y: 0)
         gradientLayer.endPoint = CGPoint(x: 0.5, y: 1)

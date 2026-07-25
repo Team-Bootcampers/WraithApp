@@ -8,5 +8,5 @@
 import Foundation
 
 protocol RestaurantServiceProtocol {
-    func fetchRestaurants(city: String) async throws -> [Restaurant]
+    func fetchRestaurants(country: String, city: String, personalityAnalysis: String) async throws -> [Restaurant]
 }

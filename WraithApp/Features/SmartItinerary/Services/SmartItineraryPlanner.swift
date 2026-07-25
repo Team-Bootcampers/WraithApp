@@ -82,7 +82,7 @@ final class SmartItineraryPlanner {
 
         async let hotelsTask = loadHotels(city: city)
         async let placesTask = loadPlaces(city: city)
-        async let restaurantsTask = loadRestaurants(city: city)
+        async let restaurantsTask = loadRestaurants(country: destination.countryName, city: city)
 
         let (hotels, places, restaurants) = await (hotelsTask, placesTask, restaurantsTask)
 
@@ -116,8 +116,12 @@ final class SmartItineraryPlanner {
         (try? await placeService.fetchPlaces(city: city)) ?? []
     }
 
-    private func loadRestaurants(city: String) async -> [Restaurant] {
-        (try? await restaurantService.fetchRestaurants(city: city)) ?? []
+    private func loadRestaurants(country: String, city: String) async -> [Restaurant] {
+        (try? await restaurantService.fetchRestaurants(
+            country: country,
+            city: city,
+            personalityAnalysis: TravelPersonalityStore.current ?? ""
+        )) ?? []
     }
 
     // MARK: - Persona Rules

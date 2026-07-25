@@ -44,4 +44,21 @@ extension UIColor {
     static let wraithSurface = UIColor(light: "#FFFFFF", dark: "#241E18")
     static let wraithSurfaceVariant = UIColor(light: "#FFF3D6", dark: "#3D3120")
     static let wraithOnPrimary = UIColor.white
+
+    /// Destructive/error state (delete actions, validation messages) — deliberately distinct
+    /// from `wraithPrimary` even though both are red-toned, so a destructive affordance never
+    /// reads as "selected/active" (which already uses `wraithPrimary`).
+    static let wraithError = UIColor(light: "#DC2626", dark: "#F87171")
+
+    // MARK: - Photo Scrims
+
+    /// Fixed-black overlays for legibility on top of arbitrary photo content (cards, hero
+    /// images). Intentionally NOT theme-aware like the tokens above — a photo needs the same
+    /// darkening treatment regardless of the app's light/dark mode.
+    static let wraithPhotoScrimLight = UIColor.black.withAlphaComponent(0.28)
+    static let wraithPhotoScrimHeavy = UIColor.black.withAlphaComponent(0.78)
+
+    /// Card drop-shadow color — same reasoning as the scrims above, a shadow needs to stay a
+    /// fixed dark tone regardless of theme rather than following `wraithOnSurface`.
+    static let wraithCardShadow = UIColor.black.withAlphaComponent(0.08)
 }

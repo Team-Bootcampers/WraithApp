@@ -36,7 +36,7 @@ final class TripSummaryViewController: UIViewController {
         configuration.image = UIImage(systemName: "creditcard.fill")
         configuration.imagePadding = 8
         configuration.baseBackgroundColor = TripAccentTheme.accent
-        configuration.baseForegroundColor = .white
+        configuration.baseForegroundColor = .wraithOnPrimary
         configuration.cornerStyle = .large
         configuration.titleTextAttributesTransformer = UIConfigurationTextAttributesTransformer { incoming in
             var outgoing = incoming
@@ -70,7 +70,7 @@ final class TripSummaryViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         title = "Seyahat Özeti"
-        view.backgroundColor = .systemGroupedBackground
+        view.backgroundColor = .wraithBackground
         navigationItem.rightBarButtonItem = UIBarButtonItem(title: "Düzenle", style: .plain, target: self, action: #selector(didTapEditTrip))
         setupLayout()
     }
@@ -143,7 +143,7 @@ private final class TripSummaryHeroView: UIView {
 
     private lazy var iconImageView: UIImageView = {
         let imageView = UIImageView(image: UIImage(systemName: "airplane.departure"))
-        imageView.tintColor = .white
+        imageView.tintColor = .wraithOnPrimary
         imageView.contentMode = .scaleAspectFit
         imageView.translatesAutoresizingMaskIntoConstraints = false
         return imageView
@@ -153,7 +153,7 @@ private final class TripSummaryHeroView: UIView {
         let label = UILabel()
         label.text = "Seyahat Özeti"
         label.font = .systemFont(ofSize: 22, weight: .bold)
-        label.textColor = .white
+        label.textColor = .wraithOnPrimary
         label.translatesAutoresizingMaskIntoConstraints = false
         return label
     }()
@@ -161,7 +161,7 @@ private final class TripSummaryHeroView: UIView {
     private lazy var subtitleLabel: UILabel = {
         let label = UILabel()
         label.font = .systemFont(ofSize: 14, weight: .medium)
-        label.textColor = UIColor.white.withAlphaComponent(0.85)
+        label.textColor = UIColor.wraithOnPrimary.withAlphaComponent(0.85)
         label.translatesAutoresizingMaskIntoConstraints = false
         return label
     }()
@@ -309,7 +309,7 @@ private final class TripStopSummaryCardView: BaseCardView {
         let captionLabel = UILabel()
         captionLabel.text = caption
         captionLabel.font = .systemFont(ofSize: 13, weight: .semibold)
-        captionLabel.textColor = .secondaryLabel
+        captionLabel.textColor = .wraithOnSurfaceVariant
         captionLabel.translatesAutoresizingMaskIntoConstraints = false
 
         let scrollView = UIScrollView()
@@ -319,7 +319,7 @@ private final class TripStopSummaryCardView: BaseCardView {
         let cardViews = items.map { item -> POIMiniCardView in
             let view = POIMiniCardView()
             view.translatesAutoresizingMaskIntoConstraints = false
-            view.setCardBackground(.tertiarySystemGroupedBackground)
+            view.setCardBackground(.wraithSurfaceVariant)
             view.configure(with: item)
             return view
         }
@@ -377,7 +377,7 @@ private final class SummaryInfoRow: UIView {
     private lazy var textLabel: UILabel = {
         let label = UILabel()
         label.font = .systemFont(ofSize: 14, weight: .regular)
-        label.textColor = .label
+        label.textColor = .wraithOnSurface
         label.numberOfLines = 0
         label.translatesAutoresizingMaskIntoConstraints = false
         return label

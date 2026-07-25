@@ -37,7 +37,7 @@ final class TravelCompatibilityViewController: UIViewController {
     private lazy var errorLabel: UILabel = {
         let label = UILabel()
         label.font = .systemFont(ofSize: 13, weight: .medium)
-        label.textColor = .systemRed
+        label.textColor = .wraithError
         label.numberOfLines = 0
         label.isHidden = true
         label.translatesAutoresizingMaskIntoConstraints = false

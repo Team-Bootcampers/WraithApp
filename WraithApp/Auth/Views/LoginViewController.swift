@@ -47,7 +47,7 @@ final class LoginViewController: UIViewController {
         let label = UILabel()
         label.translatesAutoresizingMaskIntoConstraints = false
         label.font = .systemFont(ofSize: 13, weight: .medium)
-        label.textColor = .systemRed
+        label.textColor = .wraithError
         label.numberOfLines = 0
         label.isHidden = true
         return label

@@ -20,7 +20,7 @@ enum TripAccentTheme {
     }
 
     static var cardShadowColor: UIColor {
-        UIColor.black.withAlphaComponent(0.08)
+        .wraithCardShadow
     }
 }
 
