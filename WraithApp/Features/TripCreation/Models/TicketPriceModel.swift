@@ -7,7 +7,7 @@
 
 import Foundation
 
-struct TicketPrice: Equatable {
+struct TicketPrice: Equatable, Codable {
     let transportType: TransportType
     let minPrice: Int
     let currency: String

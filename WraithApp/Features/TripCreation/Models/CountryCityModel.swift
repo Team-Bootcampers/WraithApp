@@ -7,12 +7,12 @@
 
 import Foundation
 
-struct Country: Equatable {
+struct Country: Equatable, Codable {
     let name: String
     let iso2: String
     let flagURL: URL?
 }
 
-struct City: Equatable {
+struct City: Equatable, Codable {
     let name: String
 }

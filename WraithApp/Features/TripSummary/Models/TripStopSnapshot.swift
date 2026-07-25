@@ -7,7 +7,7 @@
 
 import Foundation
 
-struct TripStopSnapshot {
+struct TripStopSnapshot: Codable {
     let stopNumber: Int
     let country: Country?
     let cityName: String?

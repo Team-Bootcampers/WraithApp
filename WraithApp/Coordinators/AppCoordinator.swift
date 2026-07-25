@@ -108,14 +108,10 @@ final class AppCoordinator: Coordinator {
     }
 
     private func showMain() {
-        let homeVC = HomeViewController()
-        homeVC.onRequestRetakeOnboarding = { [weak self] in
+        let tabBarController = MainTabBarController()
+        tabBarController.onRequestRetakeOnboarding = { [weak self] in
             self?.showCharacterAnalysis(initialAnswers: QuizAnswerStore.shared.loadSelectedOptions())
         }
-        homeVC.onRequestCreateTrip = { [weak homeVC] in
-            let tripCreationVC = TripCreationViewController()
-            homeVC?.navigationController?.pushViewController(tripCreationVC, animated: true)
-        }
-        window.rootViewController = UINavigationController(rootViewController: homeVC)
+        window.rootViewController = tabBarController
     }
 }

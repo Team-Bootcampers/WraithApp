@@ -244,6 +244,8 @@ final class TripCreationViewController: UIViewController {
             )
         }
 
+        TripStore.shared.save(SavedTrip(stops: snapshots))
+
         let summaryViewModel = TripSummaryViewModel(stops: snapshots)
         let summaryViewController = TripSummaryViewController(viewModel: summaryViewModel)
 
