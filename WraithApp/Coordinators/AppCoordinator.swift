@@ -6,7 +6,6 @@
 //
 
 import UIKit
-import NetworkManager
 
 protocol Coordinator: AnyObject {
     func start()
@@ -18,29 +17,38 @@ final class AppCoordinator: Coordinator {
     // MARK: - Properties
 
     private let window: UIWindow
-    private let networkManager: NetworkManagerProtocol
     private var characterAnalysisCoordinator: CharacterAnalysisCoordinator?
 
     // MARK: - Init
 
     init(window: UIWindow) {
         self.window = window
-        self.networkManager = NetworkManager()
     }
 
     // MARK: - Coordinator
 
     func start() {
+        let splashVC = SplashViewController()
+        splashVC.onFinish = { [weak self] in
+            self?.showOnboardingIntro()
+        }
+
+        window.rootViewController = splashVC
+        window.makeKeyAndVisible()
+    }
+
+    // MARK: - Navigation
+
+    private func showOnboardingIntro() {
         let introVC = OnboardingIntroViewController()
         introVC.onStart = { [weak self] in
             self?.showCharacterAnalysis()
         }
 
-        window.rootViewController = introVC
-        window.makeKeyAndVisible()
+        UIView.transition(with: window, duration: 0.4, options: .transitionCrossDissolve) {
+            self.window.rootViewController = introVC
+        }
     }
-
-    // MARK: - Navigation
 
     private func showCharacterAnalysis(initialAnswers: [QuizOption] = []) {
         let navigationController = UINavigationController()
@@ -50,6 +58,12 @@ final class AppCoordinator: Coordinator {
         }
         coordinator.onFinished = { [weak self] answers in
             self?.showAnalyzing(in: navigationController, answers: answers)
+        }
+        coordinator.onSkipped = { [weak self] in
+            // The user explicitly declined to finish onboarding this time, so drop any
+            // previously-saved answers rather than letting stale data get synced on next login.
+            QuizAnswerStore.shared.clear()
+            self?.showMain()
         }
 
         characterAnalysisCoordinator = coordinator
@@ -62,12 +76,19 @@ final class AppCoordinator: Coordinator {
         navigationController.setNavigationBarHidden(true, animated: false)
         navigationController.pushViewController(analyzingVC, animated: true)
 
-        let submission = CharacterAnalysisSubmission(answers: answers)
-        if let jsonData = submission.jsonData, let json = String(data: jsonData, encoding: .utf8) {
-            print(json)
+        QuizAnswerStore.shared.save(answers)
+
+        if let userId = UserSession.shared.userId, let token = UserSession.shared.idToken, let dto = OnboardingMapper.map(answers) {
+            Task {
+                do {
+                    let user = try await UserAPI.saveOnboarding(userId, answers: dto, token: token)
+                    UserSession.shared.updateOnboardedRemote(user.isOnboarded)
+                } catch {
+                    // Best-effort sync; the answers remain safely stored locally for a later retry.
+                }
+            }
         }
 
-        // TODO: Replace this simulated delay with a real POST of `submission.jsonData` to the analysis endpoint.
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.4) { [weak self] in
             self?.showTravelIdentity(in: navigationController, answers: answers)
         }
@@ -87,7 +108,14 @@ final class AppCoordinator: Coordinator {
     }
 
     private func showMain() {
-        let mainTabBarController = MainTabBarController(networkManager: networkManager)
-        window.rootViewController = mainTabBarController
+        let homeVC = HomeViewController()
+        homeVC.onRequestRetakeOnboarding = { [weak self] in
+            self?.showCharacterAnalysis(initialAnswers: QuizAnswerStore.shared.loadSelectedOptions())
+        }
+        homeVC.onRequestCreateTrip = { [weak homeVC] in
+            let tripCreationVC = TripCreationViewController()
+            homeVC?.navigationController?.pushViewController(tripCreationVC, animated: true)
+        }
+        window.rootViewController = UINavigationController(rootViewController: homeVC)
     }
 }

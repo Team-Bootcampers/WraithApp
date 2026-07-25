@@ -10,6 +10,14 @@ import UIKit
 final class GradientCapsuleButton: UIButton {
 
     private let gradientLayer = CAGradientLayer()
+    private let activityIndicator: UIActivityIndicatorView = {
+        let indicator = UIActivityIndicatorView(style: .medium)
+        indicator.translatesAutoresizingMaskIntoConstraints = false
+        indicator.color = .wraithOnPrimary
+        indicator.hidesWhenStopped = true
+        return indicator
+    }()
+    private var titleBeforeLoading: String?
 
     init(title: String) {
         super.init(frame: .zero)
@@ -21,6 +29,18 @@ final class GradientCapsuleButton: UIButton {
         fatalError("init(coder:) has not been implemented")
     }
 
+    func setLoading(_ isLoading: Bool) {
+        isEnabled = !isLoading
+        if isLoading {
+            titleBeforeLoading = title(for: .normal)
+            setTitle(nil, for: .normal)
+            activityIndicator.startAnimating()
+        } else {
+            setTitle(titleBeforeLoading, for: .normal)
+            activityIndicator.stopAnimating()
+        }
+    }
+
     private func setup(title: String) {
         gradientLayer.colors = [UIColor.wraithPrimary.cgColor, UIColor.wraithSecondary.cgColor]
         gradientLayer.startPoint = CGPoint(x: 0, y: 0.5)
@@ -29,16 +49,32 @@ final class GradientCapsuleButton: UIButton {
         clipsToBounds = true
 
         setTitle(title, for: .normal)
-        setTitleColor(.white, for: .normal)
-        setTitleColor(.white, for: .highlighted)
-        setTitleColor(.white, for: .disabled)
+        setTitleColor(.wraithOnPrimary, for: .normal)
+        setTitleColor(.wraithOnPrimary, for: .highlighted)
+        setTitleColor(.wraithOnPrimary, for: .disabled)
         titleLabel?.font = .systemFont(ofSize: 17, weight: .semibold)
-        contentEdgeInsets = UIEdgeInsets(top: 18, left: 32, bottom: 18, right: 32)
+        contentEdgeInsets = UIEdgeInsets(
+            top: WraithSpacing.space18,
+            left: WraithSpacing.space32,
+            bottom: WraithSpacing.space18,
+            right: WraithSpacing.space32
+        )
+
+        addSubview(activityIndicator)
+        NSLayoutConstraint.activate([
+            activityIndicator.centerXAnchor.constraint(equalTo: centerXAnchor),
+            activityIndicator.centerYAnchor.constraint(equalTo: centerYAnchor)
+        ])
     }
 
     override func layoutSubviews() {
         super.layoutSubviews()
         gradientLayer.frame = bounds
         layer.cornerRadius = bounds.height / 2
+    }
+
+    override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
+        super.traitCollectionDidChange(previousTraitCollection)
+        gradientLayer.colors = [UIColor.wraithPrimary.cgColor, UIColor.wraithSecondary.cgColor]
     }
 }
