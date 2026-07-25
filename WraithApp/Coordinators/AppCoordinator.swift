@@ -112,6 +112,10 @@ final class AppCoordinator: Coordinator {
         homeVC.onRequestRetakeOnboarding = { [weak self] in
             self?.showCharacterAnalysis(initialAnswers: QuizAnswerStore.shared.loadSelectedOptions())
         }
+        homeVC.onRequestCreateTrip = { [weak homeVC] in
+            let tripCreationVC = TripCreationViewController()
+            homeVC?.navigationController?.pushViewController(tripCreationVC, animated: true)
+        }
         window.rootViewController = UINavigationController(rootViewController: homeVC)
     }
 }

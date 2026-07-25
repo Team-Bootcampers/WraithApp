@@ -1,0 +1,27 @@
+# Build ve derived data
+DerivedData/
+build/
+*.xcodeproj/xcuserdata/
+*.xcworkspace/xcuserdata/
+.build/
+
+# Bağımlılık yöneticileri
+Pods/
+Carthage/Build/
+.swiftpm/
+*.xcframework/
+
+# Paket kilit / index dosyaları
+*.xcuserstate
+*.xcbkptlist
+.index-build/
+
+# Simülatör / arşiv çıktıları
+*.ipa
+*.dSYM/
+*.xcarchive/
+
+# Diğer
+.DS_Store
+*.log
+xcuserdata/
