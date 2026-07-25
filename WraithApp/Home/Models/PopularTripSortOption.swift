@@ -11,12 +11,14 @@ enum PopularTripSortOption: CaseIterable {
     case popularity
     case price
     case rating
+    case personalized
 
     var title: String {
         switch self {
         case .popularity: return "Popülerlik"
         case .price: return "Fiyat"
         case .rating: return "Puan"
+        case .personalized: return "Kişiye Özel"
         }
     }
 }

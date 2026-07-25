@@ -101,6 +101,14 @@ final class HomeViewModel {
             trips.sort { $0.price < $1.price }
         case .rating:
             trips.sort { $0.rating > $1.rating }
+        case .personalized:
+            // No real recommendation signal yet, so favorited trips are surfaced first and
+            // the rest falls back to popularity — a placeholder until the API exposes an
+            // actual personalization score.
+            trips.sort {
+                if $0.isFavorite != $1.isFavorite { return $0.isFavorite }
+                return $0.popularityScore > $1.popularityScore
+            }
         }
     }
 
