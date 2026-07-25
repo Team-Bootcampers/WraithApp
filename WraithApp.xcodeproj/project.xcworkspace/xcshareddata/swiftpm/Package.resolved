@@ -1,0 +1,15 @@
+{
+  "originHash" : "7d009dac37e198b63a4fdf82312ef29bb8350c2e3d9d2685aa8f6dda876b8bdd",
+  "pins" : [
+    {
+      "identity" : "networkmanager",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/onuraltintas2045/NetworkManager.git",
+      "state" : {
+        "revision" : "cfc2cf9d6d00c35505f96872c77436a633ea91b7",
+        "version" : "1.0.1"
+      }
+    }
+  ],
+  "version" : 3
+}
