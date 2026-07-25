@@ -149,12 +149,18 @@ final class MyTripsViewController: UIViewController {
     }
 
     private func title(for trip: SavedTrip) -> String {
+        if let preview = trip.browsedTripPreview { return preview.title }
+
         let cityNames = trip.stops.compactMap { $0.cityName }
         guard !cityNames.isEmpty else { return "Seyahat" }
         return cityNames.joined(separator: " → ")
     }
 
     private func subtitle(for trip: SavedTrip) -> String {
+        if let preview = trip.browsedTripPreview {
+            return "\(preview.durationText) · \(preview.price) \(preview.currency)"
+        }
+
         let stopCountText = trip.stops.count == 1 ? "1 durak" : "\(trip.stops.count) durak"
         guard
             let start = trip.stops.first?.startDate,
