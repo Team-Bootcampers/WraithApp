@@ -169,7 +169,7 @@ final class MyTripsViewController: UIViewController {
     @objc private func didTapTrip(_ sender: TripCardView) {
         let trips = TripStore.shared.loadTrips()
         guard trips.indices.contains(sender.tag) else { return }
-        let summaryViewModel = TripSummaryViewModel(stops: trips[sender.tag].stops)
+        let summaryViewModel = TripSummaryViewModel(trip: trips[sender.tag])
         let summaryViewController = TripSummaryViewController(viewModel: summaryViewModel)
         navigationController?.pushViewController(summaryViewController, animated: true)
     }

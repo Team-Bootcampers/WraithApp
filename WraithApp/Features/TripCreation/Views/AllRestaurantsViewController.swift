@@ -13,15 +13,15 @@ final class AllRestaurantsViewController: UIViewController {
 
     private lazy var collectionViewLayout: UICollectionViewFlowLayout = {
         let layout = UICollectionViewFlowLayout()
-        layout.minimumInteritemSpacing = 12
-        layout.minimumLineSpacing = 16
-        layout.sectionInset = UIEdgeInsets(top: 16, left: 16, bottom: 16, right: 16)
+        layout.minimumInteritemSpacing = WraithSpacing.space12
+        layout.minimumLineSpacing = WraithSpacing.space16
+        layout.sectionInset = UIEdgeInsets(top: WraithSpacing.space16, left: WraithSpacing.space16, bottom: WraithSpacing.space16, right: WraithSpacing.space16)
         return layout
     }()
 
     private lazy var collectionView: UICollectionView = {
         let collectionView = UICollectionView(frame: .zero, collectionViewLayout: collectionViewLayout)
-        collectionView.backgroundColor = .systemGroupedBackground
+        collectionView.backgroundColor = .wraithBackground
         collectionView.translatesAutoresizingMaskIntoConstraints = false
         collectionView.dataSource = self
         collectionView.delegate = self
@@ -58,7 +58,7 @@ final class AllRestaurantsViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         title = "\(city) Restoranları"
-        view.backgroundColor = .systemGroupedBackground
+        view.backgroundColor = .wraithBackground
         setupLayout()
         bindViewModel()
     }

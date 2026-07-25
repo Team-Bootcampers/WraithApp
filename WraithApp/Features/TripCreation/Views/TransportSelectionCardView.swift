@@ -23,7 +23,7 @@ final class TransportSelectionCardView: BaseCardView, TripCreationCardUpdating {
         let stack = UIStackView(arrangedSubviews: optionViews)
         stack.axis = .horizontal
         stack.distribution = .fillEqually
-        stack.spacing = 12
+        stack.spacing = WraithSpacing.space12
         stack.translatesAutoresizingMaskIntoConstraints = false
         return stack
     }()
@@ -39,7 +39,7 @@ final class TransportSelectionCardView: BaseCardView, TripCreationCardUpdating {
     private lazy var contentStackView: UIStackView = {
         let stack = UIStackView(arrangedSubviews: [optionsStackView, priceRowView])
         stack.axis = .vertical
-        stack.spacing = 16
+        stack.spacing = WraithSpacing.space16
         stack.translatesAutoresizingMaskIntoConstraints = false
         return stack
     }()
@@ -124,8 +124,8 @@ private final class TransportOptionView: UIView {
 
     private lazy var iconContainerView: UIView = {
         let view = UIView()
-        view.backgroundColor = .tertiarySystemGroupedBackground
-        view.layer.cornerRadius = 24
+        view.backgroundColor = .wraithSurfaceVariant
+        view.layer.cornerRadius = WraithRadius.radius24
         view.translatesAutoresizingMaskIntoConstraints = false
         return view
     }()
@@ -133,7 +133,7 @@ private final class TransportOptionView: UIView {
     private lazy var iconImageView: UIImageView = {
         let imageView = UIImageView()
         imageView.contentMode = .scaleAspectFit
-        imageView.tintColor = .label
+        imageView.tintColor = .wraithOnSurface
         imageView.translatesAutoresizingMaskIntoConstraints = false
         return imageView
     }()
@@ -141,7 +141,7 @@ private final class TransportOptionView: UIView {
     private lazy var titleLabel: UILabel = {
         let label = UILabel()
         label.font = .systemFont(ofSize: 12, weight: .regular)
-        label.textColor = .secondaryLabel
+        label.textColor = .wraithOnSurfaceVariant
         label.textAlignment = .center
         label.translatesAutoresizingMaskIntoConstraints = false
         return label
@@ -151,7 +151,7 @@ private final class TransportOptionView: UIView {
         let stack = UIStackView(arrangedSubviews: [iconContainerView, titleLabel])
         stack.axis = .vertical
         stack.alignment = .center
-        stack.spacing = 6
+        stack.spacing = WraithSpacing.space8
         stack.translatesAutoresizingMaskIntoConstraints = false
         return stack
     }()
@@ -196,9 +196,9 @@ private final class TransportOptionView: UIView {
 
     func setSelected(_ selected: Bool) {
         UIView.animate(withDuration: 0.35, delay: 0, usingSpringWithDamping: 0.6, initialSpringVelocity: 0.5, options: [.curveEaseInOut]) {
-            self.iconContainerView.backgroundColor = selected ? TripAccentTheme.accent : .tertiarySystemGroupedBackground
-            self.iconImageView.tintColor = selected ? .white : .label
-            self.titleLabel.textColor = selected ? .label : .secondaryLabel
+            self.iconContainerView.backgroundColor = selected ? TripAccentTheme.accent : .wraithSurfaceVariant
+            self.iconImageView.tintColor = selected ? .wraithOnPrimary : .wraithOnSurface
+            self.titleLabel.textColor = selected ? .wraithOnSurface : .wraithOnSurfaceVariant
             self.titleLabel.font = .systemFont(ofSize: 12, weight: selected ? .semibold : .regular)
             self.iconContainerView.transform = selected ? CGAffineTransform(scaleX: 1.08, y: 1.08) : .identity
         }
@@ -222,14 +222,14 @@ private final class TicketPriceRowView: UIView {
     private lazy var titleLabel: UILabel = {
         let label = UILabel()
         label.font = .systemFont(ofSize: 15, weight: .medium)
-        label.textColor = .label
+        label.textColor = .wraithOnSurface
         label.translatesAutoresizingMaskIntoConstraints = false
         return label
     }()
 
     private lazy var chevronImageView: UIImageView = {
         let imageView = UIImageView(image: UIImage(systemName: "chevron.right"))
-        imageView.tintColor = .tertiaryLabel
+        imageView.tintColor = .wraithOnSurfaceVariant
         imageView.contentMode = .scaleAspectFit
         imageView.translatesAutoresizingMaskIntoConstraints = false
         return imageView
@@ -239,7 +239,7 @@ private final class TicketPriceRowView: UIView {
         let stack = UIStackView(arrangedSubviews: [iconImageView, titleLabel, chevronImageView])
         stack.axis = .horizontal
         stack.alignment = .center
-        stack.spacing = 12
+        stack.spacing = WraithSpacing.space12
         stack.translatesAutoresizingMaskIntoConstraints = false
         return stack
     }()
@@ -259,21 +259,30 @@ private final class TicketPriceRowView: UIView {
     // MARK: - Setup
 
     private func setupAppearance() {
-        backgroundColor = .tertiarySystemGroupedBackground
-        layer.cornerRadius = 12
+        backgroundColor = .wraithSurface
+        layer.cornerRadius = WraithRadius.radius12
+        layer.borderWidth = WraithBorderWidth.hairline
+        layer.borderColor = UIColor.wraithOutlineVariant.cgColor
     }
 
     private func setupLayout() {
         addSubview(contentStackView)
         NSLayoutConstraint.activate([
-            contentStackView.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 12),
-            contentStackView.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -12),
+            contentStackView.leadingAnchor.constraint(equalTo: leadingAnchor, constant: WraithSpacing.space12),
+            contentStackView.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -WraithSpacing.space12),
             contentStackView.centerYAnchor.constraint(equalTo: centerYAnchor),
             iconImageView.widthAnchor.constraint(equalToConstant: 22),
             iconImageView.heightAnchor.constraint(equalToConstant: 22),
             chevronImageView.widthAnchor.constraint(equalToConstant: 14),
             chevronImageView.heightAnchor.constraint(equalToConstant: 14)
         ])
+    }
+
+    // MARK: - Lifecycle
+
+    override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
+        super.traitCollectionDidChange(previousTraitCollection)
+        layer.borderColor = UIColor.wraithOutlineVariant.cgColor
     }
 
     // MARK: - Public

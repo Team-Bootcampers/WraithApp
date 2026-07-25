@@ -25,7 +25,7 @@ final class TripCreationViewController: UIViewController {
     private lazy var cardsStackView: UIStackView = {
         let stack = UIStackView()
         stack.axis = .vertical
-        stack.spacing = 16
+        stack.spacing = WraithSpacing.space16
         stack.translatesAutoresizingMaskIntoConstraints = false
         return stack
     }()
@@ -39,38 +39,30 @@ final class TripCreationViewController: UIViewController {
 
     private lazy var saveButtonContainerView: UIView = {
         let view = UIView()
-        view.backgroundColor = .systemGroupedBackground
+        view.backgroundColor = .wraithBackground
         view.translatesAutoresizingMaskIntoConstraints = false
         return view
     }()
 
-    private lazy var saveButton: UIButton = {
-        var configuration = UIButton.Configuration.filled()
-        configuration.title = "Seyahati Kaydet"
-        configuration.baseBackgroundColor = TripAccentTheme.accent
-        configuration.baseForegroundColor = .white
-        configuration.cornerStyle = .large
-        configuration.titleTextAttributesTransformer = UIConfigurationTextAttributesTransformer { incoming in
-            var outgoing = incoming
-            outgoing.font = .systemFont(ofSize: 17, weight: .semibold)
-            return outgoing
-        }
-        let button = UIButton(configuration: configuration)
-        button.translatesAutoresizingMaskIntoConstraints = false
+    private lazy var saveButton: GradientCapsuleButton = {
+        let button = GradientCapsuleButton(title: "Seyahati Kaydet")
         button.addTarget(self, action: #selector(didTapSave), for: .touchUpInside)
         return button
     }()
 
     // MARK: - Properties
 
+    var onTripSaved: ((SavedTrip) -> Void)?
+
     private var stopViewModels: [TripCreationViewModel] = []
     private var stopSectionViews: [StopSectionView] = []
-    private let initialStopSnapshots: [TripStopSnapshot]
+    private let existingTrip: SavedTrip?
+    private var initialStopSnapshots: [TripStopSnapshot] { existingTrip?.stops ?? [] }
 
     // MARK: - Init
 
-    init(initialStopSnapshots: [TripStopSnapshot] = []) {
-        self.initialStopSnapshots = initialStopSnapshots
+    init(existingTrip: SavedTrip? = nil) {
+        self.existingTrip = existingTrip
         super.init(nibName: nil, bundle: nil)
     }
 
@@ -82,8 +74,8 @@ final class TripCreationViewController: UIViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        view.backgroundColor = .systemGroupedBackground
-        title = initialStopSnapshots.isEmpty ? nil : "Seyahati Düzenle"
+        view.backgroundColor = .wraithBackground
+        title = existingTrip == nil ? "Yeni Seyahat" : "Seyahati Düzenle"
         setupLayout()
         if initialStopSnapshots.isEmpty {
             addStop()
@@ -111,21 +103,20 @@ final class TripCreationViewController: UIViewController {
             scrollView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             scrollView.bottomAnchor.constraint(equalTo: saveButtonContainerView.topAnchor),
 
-            cardsStackView.topAnchor.constraint(equalTo: scrollView.contentLayoutGuide.topAnchor, constant: 16),
-            cardsStackView.leadingAnchor.constraint(equalTo: scrollView.contentLayoutGuide.leadingAnchor, constant: 14),
-            cardsStackView.trailingAnchor.constraint(equalTo: scrollView.contentLayoutGuide.trailingAnchor, constant: -14),
-            cardsStackView.bottomAnchor.constraint(equalTo: scrollView.contentLayoutGuide.bottomAnchor, constant: -16),
-            cardsStackView.widthAnchor.constraint(equalTo: scrollView.frameLayoutGuide.widthAnchor, constant: -28),
+            cardsStackView.topAnchor.constraint(equalTo: scrollView.contentLayoutGuide.topAnchor, constant: WraithSpacing.space16),
+            cardsStackView.leadingAnchor.constraint(equalTo: scrollView.contentLayoutGuide.leadingAnchor, constant: WraithSpacing.space14),
+            cardsStackView.trailingAnchor.constraint(equalTo: scrollView.contentLayoutGuide.trailingAnchor, constant: -WraithSpacing.space14),
+            cardsStackView.bottomAnchor.constraint(equalTo: scrollView.contentLayoutGuide.bottomAnchor, constant: -WraithSpacing.space16),
+            cardsStackView.widthAnchor.constraint(equalTo: scrollView.frameLayoutGuide.widthAnchor, constant: -WraithSpacing.space28),
 
             saveButtonContainerView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             saveButtonContainerView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             saveButtonContainerView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
 
-            saveButton.topAnchor.constraint(equalTo: saveButtonContainerView.topAnchor, constant: 12),
-            saveButton.leadingAnchor.constraint(equalTo: saveButtonContainerView.leadingAnchor, constant: 20),
-            saveButton.trailingAnchor.constraint(equalTo: saveButtonContainerView.trailingAnchor, constant: -20),
-            saveButton.bottomAnchor.constraint(equalTo: saveButtonContainerView.safeAreaLayoutGuide.bottomAnchor, constant: -12),
-            saveButton.heightAnchor.constraint(equalToConstant: 52)
+            saveButton.topAnchor.constraint(equalTo: saveButtonContainerView.topAnchor, constant: WraithSpacing.space12),
+            saveButton.leadingAnchor.constraint(equalTo: saveButtonContainerView.leadingAnchor, constant: WraithSpacing.space20),
+            saveButton.trailingAnchor.constraint(equalTo: saveButtonContainerView.trailingAnchor, constant: -WraithSpacing.space20),
+            saveButton.bottomAnchor.constraint(equalTo: saveButtonContainerView.safeAreaLayoutGuide.bottomAnchor, constant: -WraithSpacing.space12)
         ])
     }
 
@@ -183,6 +174,18 @@ final class TripCreationViewController: UIViewController {
     private func updateStopDeletability() {
         let canDelete = stopSectionViews.count > 1
         stopSectionViews.forEach { $0.setDeletable(canDelete) }
+    }
+
+    /// Clears every stop back to a single blank one, so the "Yeni Seyahat" tab starts
+    /// fresh the next time it's visited instead of still showing the trip that was just saved.
+    private func resetForm() {
+        stopSectionViews.forEach { $0.removeFromSuperview() }
+        stopSectionViews.removeAll()
+        stopViewModels.removeAll()
+
+        addStop(animated: false)
+        updateSaveButtonState()
+        scrollView.setContentOffset(.zero, animated: false)
     }
 
     private func makeStopSection(stopNumber: Int, viewModel: TripCreationViewModel) -> StopSectionView {
@@ -244,15 +247,21 @@ final class TripCreationViewController: UIViewController {
             )
         }
 
-        TripStore.shared.save(SavedTrip(stops: snapshots))
+        let savedTrip = SavedTrip(
+            id: existingTrip?.id ?? UUID(),
+            createdAt: existingTrip?.createdAt ?? Date(),
+            stops: snapshots
+        )
+        TripStore.shared.save(savedTrip)
 
-        let summaryViewModel = TripSummaryViewModel(stops: snapshots)
-        let summaryViewController = TripSummaryViewController(viewModel: summaryViewModel)
-
-        if let navigationController {
-            navigationController.pushViewController(summaryViewController, animated: true)
+        if existingTrip != nil {
+            // Editing an existing trip: pop back to "Seyahatlerim" (where this screen was
+            // reached from) so it reloads with the just-saved data, instead of resetting
+            // this instance in place — this instance is being discarded, not reused.
+            navigationController?.popToRootViewController(animated: true)
         } else {
-            present(UINavigationController(rootViewController: summaryViewController), animated: true)
+            resetForm()
+            onTripSaved?(savedTrip)
         }
     }
 }

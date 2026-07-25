@@ -14,7 +14,7 @@ final class TicketListViewController: UIViewController {
     private lazy var summaryLabel: UILabel = {
         let label = UILabel()
         label.font = .systemFont(ofSize: 17, weight: .medium)
-        label.textColor = .label
+        label.textColor = .wraithOnSurface
         label.textAlignment = .center
         label.numberOfLines = 0
         label.translatesAutoresizingMaskIntoConstraints = false
@@ -52,7 +52,7 @@ final class TicketListViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         title = "Biletler"
-        view.backgroundColor = .systemGroupedBackground
+        view.backgroundColor = .wraithBackground
         setupLayout()
         summaryLabel.text = summaryText()
     }
@@ -63,8 +63,8 @@ final class TicketListViewController: UIViewController {
         view.addSubview(summaryLabel)
         NSLayoutConstraint.activate([
             summaryLabel.centerYAnchor.constraint(equalTo: view.centerYAnchor),
-            summaryLabel.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 24),
-            summaryLabel.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -24)
+            summaryLabel.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: WraithSpacing.space24),
+            summaryLabel.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -WraithSpacing.space24)
         ])
     }
 

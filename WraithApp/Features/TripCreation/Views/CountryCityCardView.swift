@@ -29,7 +29,7 @@ final class CountryCityCardView: BaseCardView, TripCreationCardUpdating {
     private lazy var rowsStackView: UIStackView = {
         let stack = UIStackView(arrangedSubviews: [countryRow, cityRow])
         stack.axis = .vertical
-        stack.spacing = 12
+        stack.spacing = WraithSpacing.space12
         stack.translatesAutoresizingMaskIntoConstraints = false
         return stack
     }()
@@ -153,8 +153,8 @@ private final class SelectionRowView: UIView {
         let imageView = UIImageView()
         imageView.contentMode = .scaleAspectFill
         imageView.clipsToBounds = true
-        imageView.layer.cornerRadius = 3
-        imageView.backgroundColor = .systemGray5
+        imageView.layer.cornerRadius = WraithRadius.radius3
+        imageView.backgroundColor = .wraithSurfaceVariant
         imageView.translatesAutoresizingMaskIntoConstraints = false
         return imageView
     }()
@@ -168,7 +168,7 @@ private final class SelectionRowView: UIView {
 
     private lazy var chevronImageView: UIImageView = {
         let imageView = UIImageView(image: UIImage(systemName: "chevron.right"))
-        imageView.tintColor = .tertiaryLabel
+        imageView.tintColor = .wraithOnSurfaceVariant
         imageView.contentMode = .scaleAspectFit
         imageView.translatesAutoresizingMaskIntoConstraints = false
         return imageView
@@ -178,7 +178,7 @@ private final class SelectionRowView: UIView {
         let stack = UIStackView(arrangedSubviews: [flagImageView, titleLabel, chevronImageView])
         stack.axis = .horizontal
         stack.alignment = .center
-        stack.spacing = 10
+        stack.spacing = WraithSpacing.space10
         stack.translatesAutoresizingMaskIntoConstraints = false
         return stack
     }()
@@ -199,15 +199,17 @@ private final class SelectionRowView: UIView {
     // MARK: - Setup
 
     private func setupAppearance() {
-        backgroundColor = .tertiarySystemGroupedBackground
-        layer.cornerRadius = 12
+        backgroundColor = .wraithSurface
+        layer.cornerRadius = WraithRadius.radius12
+        layer.borderWidth = WraithBorderWidth.hairline
+        layer.borderColor = UIColor.wraithOutlineVariant.cgColor
     }
 
     private func setupLayout() {
         addSubview(contentStackView)
         NSLayoutConstraint.activate([
-            contentStackView.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 12),
-            contentStackView.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -12),
+            contentStackView.leadingAnchor.constraint(equalTo: leadingAnchor, constant: WraithSpacing.space12),
+            contentStackView.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -WraithSpacing.space12),
             contentStackView.centerYAnchor.constraint(equalTo: centerYAnchor),
             flagImageView.widthAnchor.constraint(equalToConstant: 26),
             flagImageView.heightAnchor.constraint(equalToConstant: 18),
@@ -216,11 +218,18 @@ private final class SelectionRowView: UIView {
         ])
     }
 
+    // MARK: - Lifecycle
+
+    override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
+        super.traitCollectionDidChange(previousTraitCollection)
+        layer.borderColor = UIColor.wraithOutlineVariant.cgColor
+    }
+
     // MARK: - Public
 
     func setTitle(_ text: String, isPlaceholder: Bool) {
         titleLabel.text = text
-        titleLabel.textColor = isPlaceholder ? .secondaryLabel : .label
+        titleLabel.textColor = isPlaceholder ? .wraithOnSurfaceVariant : .wraithOnSurface
     }
 
     func setFlag(url: URL?) {
@@ -293,7 +302,7 @@ private final class SelectionListViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         title = listTitle
-        view.backgroundColor = .systemGroupedBackground
+        view.backgroundColor = .wraithBackground
         navigationItem.searchController = searchController
         navigationItem.hidesSearchBarWhenScrolling = false
         navigationItem.leftBarButtonItem = UIBarButtonItem(title: "Kapat", style: .plain, target: self, action: #selector(didTapClose))
@@ -382,8 +391,8 @@ private final class SelectionItemCell: UITableViewCell {
         let imageView = UIImageView()
         imageView.contentMode = .scaleAspectFill
         imageView.clipsToBounds = true
-        imageView.layer.cornerRadius = 4
-        imageView.backgroundColor = .systemGray5
+        imageView.layer.cornerRadius = WraithRadius.radius5
+        imageView.backgroundColor = .wraithSurfaceVariant
         imageView.translatesAutoresizingMaskIntoConstraints = false
         return imageView
     }()
@@ -391,7 +400,7 @@ private final class SelectionItemCell: UITableViewCell {
     private lazy var titleLabel: UILabel = {
         let label = UILabel()
         label.font = .preferredFont(forTextStyle: .body)
-        label.textColor = .label
+        label.textColor = .wraithOnSurface
         label.translatesAutoresizingMaskIntoConstraints = false
         return label
     }()
@@ -418,7 +427,7 @@ private final class SelectionItemCell: UITableViewCell {
             flagImageView.widthAnchor.constraint(equalToConstant: 28),
             flagImageView.heightAnchor.constraint(equalToConstant: 20),
 
-            titleLabel.leadingAnchor.constraint(equalTo: flagImageView.trailingAnchor, constant: 12),
+            titleLabel.leadingAnchor.constraint(equalTo: flagImageView.trailingAnchor, constant: WraithSpacing.space12),
             titleLabel.trailingAnchor.constraint(equalTo: contentView.layoutMarginsGuide.trailingAnchor),
             titleLabel.topAnchor.constraint(equalTo: contentView.layoutMarginsGuide.topAnchor),
             titleLabel.bottomAnchor.constraint(equalTo: contentView.layoutMarginsGuide.bottomAnchor)

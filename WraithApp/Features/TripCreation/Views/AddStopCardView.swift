@@ -16,7 +16,7 @@ final class AddStopCardView: UIView {
         configuration.title = "Durak Ekleyin"
         configuration.image = UIImage(systemName: "plus.circle.fill")
         configuration.imagePlacement = .leading
-        configuration.imagePadding = 8
+        configuration.imagePadding = WraithSpacing.space8
         configuration.baseForegroundColor = TripAccentTheme.accent
         configuration.titleTextAttributesTransformer = UIConfigurationTextAttributesTransformer { incoming in
             var outgoing = incoming
@@ -34,7 +34,7 @@ final class AddStopCardView: UIView {
         layer.strokeColor = TripAccentTheme.accent.withAlphaComponent(0.4).cgColor
         layer.fillColor = UIColor.clear.cgColor
         layer.lineDashPattern = [6, 4]
-        layer.lineWidth = 1.5
+        layer.lineWidth = WraithBorderWidth.emphasized
         return layer
     }()
 
@@ -57,15 +57,15 @@ final class AddStopCardView: UIView {
     // MARK: - Setup
 
     private func setupAppearance() {
-        backgroundColor = .secondarySystemGroupedBackground
-        layer.cornerRadius = 16
+        backgroundColor = .wraithSurface
+        layer.cornerRadius = WraithRadius.radius16
         layer.addSublayer(borderLayer)
     }
 
     private func setupLayout() {
         addSubview(addButton)
         NSLayoutConstraint.activate([
-            heightAnchor.constraint(equalToConstant: 60),
+            heightAnchor.constraint(equalToConstant: WraithSpacing.space60),
             addButton.centerXAnchor.constraint(equalTo: centerXAnchor),
             addButton.centerYAnchor.constraint(equalTo: centerYAnchor)
         ])

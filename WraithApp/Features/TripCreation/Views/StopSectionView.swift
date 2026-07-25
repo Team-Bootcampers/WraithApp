@@ -21,7 +21,7 @@ final class StopSectionView: BaseCardView {
     private lazy var innerCardsStackView: UIStackView = {
         let stack = UIStackView()
         stack.axis = .vertical
-        stack.spacing = 16
+        stack.spacing = WraithSpacing.space16
         stack.translatesAutoresizingMaskIntoConstraints = false
         return stack
     }()
@@ -33,7 +33,7 @@ final class StopSectionView: BaseCardView {
         var chevronConfiguration = UIButton.Configuration.plain()
         chevronConfiguration.image = UIImage(systemName: "chevron.up")
         chevronConfiguration.baseForegroundColor = TripAccentTheme.accent
-        chevronConfiguration.contentInsets = NSDirectionalEdgeInsets(top: 10, leading: 10, bottom: 10, trailing: 10)
+        chevronConfiguration.contentInsets = NSDirectionalEdgeInsets(top: WraithSpacing.space10, leading: WraithSpacing.space10, bottom: WraithSpacing.space10, trailing: WraithSpacing.space10)
         chevronButton.configuration = chevronConfiguration
         self.chevronButton = chevronButton
 
@@ -41,7 +41,7 @@ final class StopSectionView: BaseCardView {
         var deleteConfiguration = UIButton.Configuration.plain()
         deleteConfiguration.image = UIImage(systemName: "trash")
         deleteConfiguration.baseForegroundColor = .systemRed
-        deleteConfiguration.contentInsets = NSDirectionalEdgeInsets(top: 10, leading: 10, bottom: 10, trailing: 10)
+        deleteConfiguration.contentInsets = NSDirectionalEdgeInsets(top: WraithSpacing.space10, leading: WraithSpacing.space10, bottom: WraithSpacing.space10, trailing: WraithSpacing.space10)
         deleteButton.configuration = deleteConfiguration
         deleteButton.isHidden = true
         self.deleteButton = deleteButton
@@ -55,7 +55,7 @@ final class StopSectionView: BaseCardView {
         // Recede behind the nested cards instead of sharing their background tier —
         // otherwise a secondary-tier card sits directly on a secondary-tier card and the
         // two are indistinguishable except for the shadow line between them.
-        configureContainer(backgroundColor: .systemGroupedBackground, borderColor: .separator)
+        configureContainer(backgroundColor: .wraithBackground, borderColor: .wraithOutlineVariant)
 
         chevronButton.addTarget(self, action: #selector(didTapChevron), for: .touchUpInside)
         deleteButton.addTarget(self, action: #selector(didTapDelete), for: .touchUpInside)
@@ -82,8 +82,8 @@ final class StopSectionView: BaseCardView {
             // Bleed slightly past the standard card padding so the nested cards aren't
             // squeezed by two layers of inset (this section's own padding plus each
             // nested card's own padding).
-            innerCardsStackView.leadingAnchor.constraint(equalTo: contentContainerView.leadingAnchor, constant: -8),
-            innerCardsStackView.trailingAnchor.constraint(equalTo: contentContainerView.trailingAnchor, constant: 8),
+            innerCardsStackView.leadingAnchor.constraint(equalTo: contentContainerView.leadingAnchor, constant: -WraithSpacing.space8),
+            innerCardsStackView.trailingAnchor.constraint(equalTo: contentContainerView.trailingAnchor, constant: WraithSpacing.space8),
             innerCardsBottomConstraint
         ])
     }

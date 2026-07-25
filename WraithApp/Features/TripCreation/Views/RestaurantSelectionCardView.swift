@@ -16,7 +16,7 @@ final class RestaurantSelectionCardView: BaseCardView, TripCreationCardUpdating 
     private lazy var itemCardViews: [POIMiniCardView] = (0..<5).map { index in
         let view = POIMiniCardView()
         view.translatesAutoresizingMaskIntoConstraints = false
-        view.setCardBackground(.tertiarySystemGroupedBackground)
+        view.setCardBackground(.wraithSurfaceVariant)
         view.onTap = { [weak self] in self?.didTapItemCard(at: index) }
         return view
     }
@@ -24,7 +24,7 @@ final class RestaurantSelectionCardView: BaseCardView, TripCreationCardUpdating 
     private lazy var itemsStackView: UIStackView = {
         let stack = UIStackView(arrangedSubviews: itemCardViews)
         stack.axis = .horizontal
-        stack.spacing = 12
+        stack.spacing = WraithSpacing.space12
         stack.translatesAutoresizingMaskIntoConstraints = false
         return stack
     }()
@@ -39,7 +39,7 @@ final class RestaurantSelectionCardView: BaseCardView, TripCreationCardUpdating 
     private lazy var placeholderLabel: UILabel = {
         let label = UILabel()
         label.font = .systemFont(ofSize: 14, weight: .regular)
-        label.textColor = .secondaryLabel
+        label.textColor = .wraithOnSurfaceVariant
         label.textAlignment = .center
         label.numberOfLines = 0
         label.translatesAutoresizingMaskIntoConstraints = false
@@ -66,7 +66,7 @@ final class RestaurantSelectionCardView: BaseCardView, TripCreationCardUpdating 
         configuration.baseForegroundColor = TripAccentTheme.accent
         configuration.titleTextAttributesTransformer = UIConfigurationTextAttributesTransformer { incoming in
             var outgoing = incoming
-            outgoing.font = .systemFont(ofSize: 13, weight: .medium)
+            outgoing.font = .systemFont(ofSize: 13, weight: .semibold)
             return outgoing
         }
         button.configuration = configuration
@@ -95,7 +95,7 @@ final class RestaurantSelectionCardView: BaseCardView, TripCreationCardUpdating 
             itemsScrollView.leadingAnchor.constraint(equalTo: contentContainerView.leadingAnchor),
             itemsScrollView.trailingAnchor.constraint(equalTo: contentContainerView.trailingAnchor),
             itemsScrollView.bottomAnchor.constraint(equalTo: contentContainerView.bottomAnchor),
-            itemsScrollView.heightAnchor.constraint(equalToConstant: 220),
+            itemsScrollView.heightAnchor.constraint(equalToConstant: WraithSpacing.space220),
 
             itemsStackView.topAnchor.constraint(equalTo: itemsScrollView.topAnchor),
             itemsStackView.leadingAnchor.constraint(equalTo: itemsScrollView.leadingAnchor),

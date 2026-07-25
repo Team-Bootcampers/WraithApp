@@ -11,7 +11,9 @@ final class TripSummaryViewModel {
 
     // MARK: - Properties
 
-    let stops: [TripStopSnapshot]
+    let trip: SavedTrip
+
+    var stops: [TripStopSnapshot] { trip.stops }
 
     var totalCost: Int {
         stops.reduce(0) { $0 + totalCost(for: $1) }
@@ -19,8 +21,8 @@ final class TripSummaryViewModel {
 
     // MARK: - Init
 
-    init(stops: [TripStopSnapshot]) {
-        self.stops = stops
+    init(trip: SavedTrip) {
+        self.trip = trip
     }
 
     // MARK: - Cost Calculation

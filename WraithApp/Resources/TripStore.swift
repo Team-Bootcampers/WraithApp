@@ -18,9 +18,16 @@ final class TripStore {
 
     private init() {}
 
+    /// Inserts a new trip, or overwrites the existing one in place if `trip.id` already
+    /// exists — otherwise editing a saved trip would leave the original untouched and add
+    /// a duplicate alongside it instead of updating it.
     func save(_ trip: SavedTrip) {
         var trips = loadTrips()
-        trips.insert(trip, at: 0)
+        if let index = trips.firstIndex(where: { $0.id == trip.id }) {
+            trips[index] = trip
+        } else {
+            trips.insert(trip, at: 0)
+        }
         persist(trips)
     }
 

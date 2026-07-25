@@ -15,7 +15,7 @@ final class POIMiniCardView: UIView {
     /// `self` can host a shadow (shadows and `clipsToBounds` can't coexist on one layer).
     private lazy var containerView: UIView = {
         let view = UIView()
-        view.layer.cornerRadius = 14
+        view.layer.cornerRadius = WraithRadius.radius16
         view.clipsToBounds = true
         view.layer.borderColor = TripAccentTheme.accent.cgColor
         view.translatesAutoresizingMaskIntoConstraints = false
@@ -26,16 +26,16 @@ final class POIMiniCardView: UIView {
         let imageView = UIImageView()
         imageView.contentMode = .scaleAspectFill
         imageView.clipsToBounds = true
-        imageView.backgroundColor = .systemGray5
+        imageView.backgroundColor = .wraithSurfaceVariant
         imageView.translatesAutoresizingMaskIntoConstraints = false
         return imageView
     }()
 
     private lazy var selectionBadgeImageView: UIImageView = {
         let imageView = UIImageView(image: UIImage(systemName: "checkmark"))
-        imageView.tintColor = .white
+        imageView.tintColor = .wraithOnPrimary
         imageView.backgroundColor = TripAccentTheme.accent
-        imageView.layer.cornerRadius = 11
+        imageView.layer.cornerRadius = WraithRadius.radius11
         imageView.clipsToBounds = true
         imageView.contentMode = .center
         imageView.isHidden = true
@@ -47,7 +47,7 @@ final class POIMiniCardView: UIView {
     private lazy var nameLabel: UILabel = {
         let label = UILabel()
         label.font = .systemFont(ofSize: 14, weight: .semibold)
-        label.textColor = .label
+        label.textColor = .wraithOnSurface
         label.numberOfLines = 1
         label.translatesAutoresizingMaskIntoConstraints = false
         return label
@@ -55,7 +55,7 @@ final class POIMiniCardView: UIView {
 
     private lazy var ratingIconImageView: UIImageView = {
         let imageView = UIImageView(image: UIImage(systemName: "star.fill"))
-        imageView.tintColor = .systemYellow
+        imageView.tintColor = .wraithSecondary
         imageView.contentMode = .scaleAspectFit
         imageView.translatesAutoresizingMaskIntoConstraints = false
         return imageView
@@ -64,7 +64,7 @@ final class POIMiniCardView: UIView {
     private lazy var ratingLabel: UILabel = {
         let label = UILabel()
         label.font = .systemFont(ofSize: 12, weight: .regular)
-        label.textColor = .secondaryLabel
+        label.textColor = .wraithOnSurfaceVariant
         label.translatesAutoresizingMaskIntoConstraints = false
         return label
     }()
@@ -81,7 +81,7 @@ final class POIMiniCardView: UIView {
     private lazy var priceLabel: UILabel = {
         let label = UILabel()
         label.font = .systemFont(ofSize: 13, weight: .semibold)
-        label.textColor = .label
+        label.textColor = .wraithOnSurface
         label.translatesAutoresizingMaskIntoConstraints = false
         return label
     }()
@@ -89,7 +89,7 @@ final class POIMiniCardView: UIView {
     private lazy var textStackView: UIStackView = {
         let stack = UIStackView(arrangedSubviews: [nameLabel, ratingStackView, priceLabel])
         stack.axis = .vertical
-        stack.spacing = 4
+        stack.spacing = WraithSpacing.space4
         stack.alignment = .fill
         stack.translatesAutoresizingMaskIntoConstraints = false
         return stack
@@ -107,7 +107,7 @@ final class POIMiniCardView: UIView {
     private lazy var mainStackView: UIStackView = {
         let stack = UIStackView(arrangedSubviews: [photoImageView, textContainerView])
         stack.axis = .vertical
-        stack.spacing = 8
+        stack.spacing = WraithSpacing.space8
         stack.translatesAutoresizingMaskIntoConstraints = false
         return stack
     }()
@@ -116,7 +116,7 @@ final class POIMiniCardView: UIView {
 
     var onTap: (() -> Void)?
     private var isCurrentlySelected = false
-    private var baseBackgroundColor: UIColor = .secondarySystemGroupedBackground {
+    private var baseBackgroundColor: UIColor = .wraithSurface {
         didSet {
             guard !isCurrentlySelected else { return }
             containerView.backgroundColor = baseBackgroundColor
@@ -161,20 +161,20 @@ final class POIMiniCardView: UIView {
             mainStackView.topAnchor.constraint(equalTo: containerView.topAnchor),
             mainStackView.leadingAnchor.constraint(equalTo: containerView.leadingAnchor),
             mainStackView.trailingAnchor.constraint(equalTo: containerView.trailingAnchor),
-            mainStackView.bottomAnchor.constraint(equalTo: containerView.bottomAnchor, constant: -10),
+            mainStackView.bottomAnchor.constraint(equalTo: containerView.bottomAnchor, constant: -WraithSpacing.space10),
 
-            photoImageView.heightAnchor.constraint(equalToConstant: 140),
+            photoImageView.heightAnchor.constraint(equalToConstant: WraithSpacing.space140),
 
             textStackView.topAnchor.constraint(equalTo: textContainerView.topAnchor),
             textStackView.bottomAnchor.constraint(equalTo: textContainerView.bottomAnchor),
-            textStackView.leadingAnchor.constraint(equalTo: textContainerView.leadingAnchor, constant: 10),
-            textStackView.trailingAnchor.constraint(equalTo: textContainerView.trailingAnchor, constant: -10),
+            textStackView.leadingAnchor.constraint(equalTo: textContainerView.leadingAnchor, constant: WraithSpacing.space10),
+            textStackView.trailingAnchor.constraint(equalTo: textContainerView.trailingAnchor, constant: -WraithSpacing.space10),
 
             ratingIconImageView.widthAnchor.constraint(equalToConstant: 12),
             ratingIconImageView.heightAnchor.constraint(equalToConstant: 12),
 
-            selectionBadgeImageView.topAnchor.constraint(equalTo: photoImageView.topAnchor, constant: 8),
-            selectionBadgeImageView.trailingAnchor.constraint(equalTo: photoImageView.trailingAnchor, constant: -8),
+            selectionBadgeImageView.topAnchor.constraint(equalTo: photoImageView.topAnchor, constant: WraithSpacing.space8),
+            selectionBadgeImageView.trailingAnchor.constraint(equalTo: photoImageView.trailingAnchor, constant: -WraithSpacing.space8),
             selectionBadgeImageView.widthAnchor.constraint(equalToConstant: 22),
             selectionBadgeImageView.heightAnchor.constraint(equalToConstant: 22)
         ])
@@ -214,7 +214,7 @@ final class POIMiniCardView: UIView {
             selectionBadgeImageView.isHidden = !selected
             selectionBadgeImageView.alpha = selected ? 1 : 0
             selectionBadgeImageView.transform = .identity
-            containerView.layer.borderWidth = selected ? 2 : 0
+            containerView.layer.borderWidth = selected ? WraithBorderWidth.selected : 0
             containerView.backgroundColor = selected ? TripAccentTheme.accentSoftBackground : baseBackgroundColor
             return
         }

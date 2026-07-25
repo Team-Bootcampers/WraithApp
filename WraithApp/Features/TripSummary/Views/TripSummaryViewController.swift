@@ -110,7 +110,7 @@ final class TripSummaryViewController: UIViewController {
     // MARK: - Actions
 
     @objc private func didTapEditTrip() {
-        let editViewController = TripCreationViewController(initialStopSnapshots: viewModel.stops)
+        let editViewController = TripCreationViewController(existingTrip: viewModel.trip)
         if let navigationController {
             navigationController.pushViewController(editViewController, animated: true)
         } else {
@@ -431,48 +431,23 @@ private final class SummaryInfoRow: UIView {
 
 // MARK: - TripSummaryTotalCostView
 
-private final class TripSummaryTotalCostView: UIView {
+private final class TripSummaryTotalCostView: BaseCardView {
 
     // MARK: - UI Components
 
-    private lazy var gradientBackgroundView: GradientView = {
-        let view = GradientView()
-        view.translatesAutoresizingMaskIntoConstraints = false
-        return view
-    }()
-
-    private lazy var titleLabel: UILabel = {
+    private lazy var amountLabel: UILabel = {
         let label = UILabel()
-        label.text = "Tahmini Toplam Maliyet"
-        label.font = .systemFont(ofSize: 14, weight: .medium)
-        label.textColor = UIColor.white.withAlphaComponent(0.85)
+        label.font = .systemFont(ofSize: 22, weight: .bold)
+        label.textColor = .wraithPrimary
         label.translatesAutoresizingMaskIntoConstraints = false
         return label
-    }()
-
-    private lazy var costLabel: UILabel = {
-        let label = UILabel()
-        label.font = .systemFont(ofSize: 30, weight: .bold)
-        label.textColor = .white
-        label.translatesAutoresizingMaskIntoConstraints = false
-        return label
-    }()
-
-    private lazy var textStackView: UIStackView = {
-        let stack = UIStackView(arrangedSubviews: [titleLabel, costLabel])
-        stack.axis = .vertical
-        stack.spacing = 4
-        stack.alignment = .center
-        stack.translatesAutoresizingMaskIntoConstraints = false
-        return stack
     }()
 
     // MARK: - Init
 
     init(totalCost: Int) {
-        super.init(frame: .zero)
-        costLabel.text = "\(totalCost) TL"
-        setupAppearance()
+        super.init(title: "Tahmini Toplam Maliyet", iconSystemName: "turkishlirasign.circle.fill")
+        amountLabel.text = "\(totalCost) TL"
         setupLayout()
     }
 
@@ -482,26 +457,13 @@ private final class TripSummaryTotalCostView: UIView {
 
     // MARK: - Setup
 
-    private func setupAppearance() {
-        applyCardShadow()
-        gradientBackgroundView.layer.cornerRadius = 20
-        gradientBackgroundView.layer.masksToBounds = true
-    }
-
     private func setupLayout() {
-        addSubview(gradientBackgroundView)
-        addSubview(textStackView)
-
+        contentContainerView.addSubview(amountLabel)
         NSLayoutConstraint.activate([
-            heightAnchor.constraint(equalToConstant: 120),
-
-            gradientBackgroundView.topAnchor.constraint(equalTo: topAnchor),
-            gradientBackgroundView.leadingAnchor.constraint(equalTo: leadingAnchor),
-            gradientBackgroundView.trailingAnchor.constraint(equalTo: trailingAnchor),
-            gradientBackgroundView.bottomAnchor.constraint(equalTo: bottomAnchor),
-
-            textStackView.centerXAnchor.constraint(equalTo: centerXAnchor),
-            textStackView.centerYAnchor.constraint(equalTo: centerYAnchor)
+            amountLabel.topAnchor.constraint(equalTo: contentContainerView.topAnchor),
+            amountLabel.leadingAnchor.constraint(equalTo: contentContainerView.leadingAnchor),
+            amountLabel.trailingAnchor.constraint(lessThanOrEqualTo: contentContainerView.trailingAnchor),
+            amountLabel.bottomAnchor.constraint(equalTo: contentContainerView.bottomAnchor)
         ])
     }
 }

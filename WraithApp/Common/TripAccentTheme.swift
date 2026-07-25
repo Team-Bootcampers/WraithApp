@@ -8,8 +8,8 @@
 import UIKit
 
 enum TripAccentTheme {
-    static let accent = UIColor(red: 0.95, green: 0.47, blue: 0.31, alpha: 1)
-    static let accentDeep = UIColor(red: 0.88, green: 0.34, blue: 0.28, alpha: 1)
+    static let accent = UIColor.wraithPrimary
+    static let accentDeep = UIColor(light: "#C6303C", dark: "#E64550")
 
     static var gradientColors: [CGColor] {
         [accent.cgColor, accentDeep.cgColor]
@@ -17,10 +17,6 @@ enum TripAccentTheme {
 
     static var accentSoftBackground: UIColor {
         accent.withAlphaComponent(0.12)
-    }
-
-    static var accentBorder: UIColor {
-        accent.withAlphaComponent(0.5)
     }
 
     static var cardShadowColor: UIColor {

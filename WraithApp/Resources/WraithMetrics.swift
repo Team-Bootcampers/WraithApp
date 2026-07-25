@@ -37,6 +37,7 @@ enum WraithRadius {
     static let radius12: CGFloat = 12
     static let radius16: CGFloat = 16
     static let radius18: CGFloat = 18
+    static let radius24: CGFloat = 24
     static let radius28: CGFloat = 28
     static let radius38: CGFloat = 38
 }

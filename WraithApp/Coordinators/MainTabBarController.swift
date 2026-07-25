@@ -45,8 +45,9 @@ final class MainTabBarController: UITabBarController {
             selectedImage: UIImage(systemName: "house.fill")
         )
 
+        let tripCreationVC = TripCreationViewController()
         let tripCreationTab = wrap(
-            TripCreationViewController(),
+            tripCreationVC,
             title: "Yeni Seyahat",
             image: UIImage(systemName: "suitcase"),
             selectedImage: UIImage(systemName: "suitcase.fill")
@@ -58,6 +59,16 @@ final class MainTabBarController: UITabBarController {
             image: UIImage(systemName: "airplane"),
             selectedImage: UIImage(systemName: "airplane.circle.fill")
         )
+
+        tripCreationVC.onTripSaved = { [weak self, weak myTripsTab] savedTrip in
+            guard let self, let myTripsTab else { return }
+            if let index = self.viewControllers?.firstIndex(of: myTripsTab) {
+                self.selectedIndex = index
+            }
+            myTripsTab.popToRootViewController(animated: false)
+            let summaryViewModel = TripSummaryViewModel(trip: savedTrip)
+            myTripsTab.pushViewController(TripSummaryViewController(viewModel: summaryViewModel), animated: true)
+        }
 
         let profileVC = ProfileViewController()
         profileVC.onRequestRetakeOnboarding = { [weak self] in

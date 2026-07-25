@@ -33,7 +33,7 @@ final class DateSelectionCardView: BaseCardView, TripCreationCardUpdating {
     private lazy var boxesStackView: UIStackView = {
         let stack = UIStackView(arrangedSubviews: [departureBox, returnBox])
         stack.axis = .horizontal
-        stack.spacing = 12
+        stack.spacing = WraithSpacing.space12
         stack.distribution = .fillEqually
         stack.translatesAutoresizingMaskIntoConstraints = false
         return stack
@@ -54,8 +54,9 @@ final class DateSelectionCardView: BaseCardView, TripCreationCardUpdating {
         var configuration = UIButton.Configuration.filled()
         configuration.title = "Tamam"
         configuration.baseBackgroundColor = TripAccentTheme.accent
-        configuration.baseForegroundColor = .white
-        configuration.cornerStyle = .medium
+        configuration.baseForegroundColor = .wraithOnPrimary
+        configuration.cornerStyle = .fixed
+        configuration.background.cornerRadius = WraithRadius.radius12
         let button = UIButton(configuration: configuration)
         button.translatesAutoresizingMaskIntoConstraints = false
         button.isHidden = true
@@ -66,7 +67,7 @@ final class DateSelectionCardView: BaseCardView, TripCreationCardUpdating {
     private lazy var contentStackView: UIStackView = {
         let stack = UIStackView(arrangedSubviews: [boxesStackView, datePicker, confirmButton])
         stack.axis = .vertical
-        stack.spacing = 16
+        stack.spacing = WraithSpacing.space16
         stack.translatesAutoresizingMaskIntoConstraints = false
         return stack
     }()
@@ -105,8 +106,8 @@ final class DateSelectionCardView: BaseCardView, TripCreationCardUpdating {
             contentStackView.leadingAnchor.constraint(equalTo: contentContainerView.leadingAnchor),
             contentStackView.trailingAnchor.constraint(equalTo: contentContainerView.trailingAnchor),
             contentStackView.bottomAnchor.constraint(equalTo: contentContainerView.bottomAnchor),
-            departureBox.heightAnchor.constraint(equalToConstant: 60),
-            returnBox.heightAnchor.constraint(equalToConstant: 60)
+            departureBox.heightAnchor.constraint(equalToConstant: WraithSpacing.space60),
+            returnBox.heightAnchor.constraint(equalToConstant: WraithSpacing.space60)
         ])
     }
 
@@ -219,7 +220,7 @@ private final class DateBoxView: UIView {
     private lazy var captionLabel: UILabel = {
         let label = UILabel()
         label.font = .systemFont(ofSize: 12, weight: .semibold)
-        label.textColor = .secondaryLabel
+        label.textColor = .wraithOnSurfaceVariant
         label.translatesAutoresizingMaskIntoConstraints = false
         return label
     }()
@@ -227,7 +228,7 @@ private final class DateBoxView: UIView {
     private lazy var dateLabel: UILabel = {
         let label = UILabel()
         label.font = .systemFont(ofSize: 15, weight: .medium)
-        label.textColor = .label
+        label.textColor = .wraithOnSurface
         label.translatesAutoresizingMaskIntoConstraints = false
         return label
     }()
@@ -235,10 +236,14 @@ private final class DateBoxView: UIView {
     private lazy var contentStackView: UIStackView = {
         let stack = UIStackView(arrangedSubviews: [captionLabel, dateLabel])
         stack.axis = .vertical
-        stack.spacing = 4
+        stack.spacing = WraithSpacing.space4
         stack.translatesAutoresizingMaskIntoConstraints = false
         return stack
     }()
+
+    // MARK: - Properties
+
+    private var isActive = false
 
     // MARK: - Init
 
@@ -256,19 +261,26 @@ private final class DateBoxView: UIView {
     // MARK: - Setup
 
     private func setupAppearance() {
-        backgroundColor = .tertiarySystemGroupedBackground
-        layer.cornerRadius = 12
-        layer.borderWidth = 1
-        layer.borderColor = UIColor.clear.cgColor
+        backgroundColor = .wraithSurface
+        layer.cornerRadius = WraithRadius.radius12
+        layer.borderWidth = WraithBorderWidth.hairline
+        layer.borderColor = UIColor.wraithOutlineVariant.cgColor
     }
 
     private func setupLayout() {
         addSubview(contentStackView)
         NSLayoutConstraint.activate([
-            contentStackView.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 12),
-            contentStackView.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -12),
+            contentStackView.leadingAnchor.constraint(equalTo: leadingAnchor, constant: WraithSpacing.space12),
+            contentStackView.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -WraithSpacing.space12),
             contentStackView.centerYAnchor.constraint(equalTo: centerYAnchor)
         ])
+    }
+
+    // MARK: - Lifecycle
+
+    override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
+        super.traitCollectionDidChange(previousTraitCollection)
+        applyBorder(active: isActive)
     }
 
     // MARK: - Public
@@ -278,10 +290,16 @@ private final class DateBoxView: UIView {
     }
 
     func setActive(_ active: Bool) {
+        isActive = active
         UIView.animate(withDuration: 0.25, delay: 0, usingSpringWithDamping: 0.75, initialSpringVelocity: 0.4, options: [.curveEaseInOut]) {
-            self.layer.borderColor = (active ? TripAccentTheme.accentBorder : .clear).cgColor
-            self.backgroundColor = active ? TripAccentTheme.accentSoftBackground : .tertiarySystemGroupedBackground
+            self.applyBorder(active: active)
+            self.backgroundColor = active ? TripAccentTheme.accentSoftBackground : .wraithSurface
             self.transform = active ? CGAffineTransform(scaleX: 1.02, y: 1.02) : .identity
         }
+    }
+
+    private func applyBorder(active: Bool) {
+        layer.borderWidth = active ? WraithBorderWidth.selected : WraithBorderWidth.hairline
+        layer.borderColor = (active ? UIColor.wraithPrimary : .wraithOutlineVariant).cgColor
     }
 }

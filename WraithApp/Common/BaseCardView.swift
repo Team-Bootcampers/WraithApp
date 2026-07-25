@@ -13,8 +13,8 @@ class BaseCardView: UIView {
 
     private lazy var containerView: UIView = {
         let view = UIView()
-        view.backgroundColor = .secondarySystemGroupedBackground
-        view.layer.cornerRadius = 18
+        view.backgroundColor = .wraithSurface
+        view.layer.cornerRadius = WraithRadius.radius18
         view.layer.masksToBounds = true
         view.translatesAutoresizingMaskIntoConstraints = false
         return view
@@ -23,7 +23,7 @@ class BaseCardView: UIView {
     private lazy var titleLabel: UILabel = {
         let label = UILabel()
         label.font = .systemFont(ofSize: 17, weight: .semibold)
-        label.textColor = .label
+        label.textColor = .wraithOnSurface
         label.translatesAutoresizingMaskIntoConstraints = false
         return label
     }()
@@ -39,7 +39,7 @@ class BaseCardView: UIView {
     private lazy var iconBadgeView: UIView = {
         let view = UIView()
         view.backgroundColor = TripAccentTheme.accentSoftBackground
-        view.layer.cornerRadius = 9
+        view.layer.cornerRadius = WraithRadius.radius16
         view.translatesAutoresizingMaskIntoConstraints = false
         return view
     }()
@@ -62,7 +62,7 @@ class BaseCardView: UIView {
     private lazy var mainStackView: UIStackView = {
         let stack = UIStackView(arrangedSubviews: [headerStackView, contentContainerView])
         stack.axis = .vertical
-        stack.spacing = 14
+        stack.spacing = WraithSpacing.space14
         stack.translatesAutoresizingMaskIntoConstraints = false
         return stack
     }()
@@ -78,12 +78,12 @@ class BaseCardView: UIView {
         setupAppearance()
         setupLayout()
         NSLayoutConstraint.activate([
-            iconBadgeView.widthAnchor.constraint(equalToConstant: 34),
-            iconBadgeView.heightAnchor.constraint(equalToConstant: 34),
+            iconBadgeView.widthAnchor.constraint(equalToConstant: 32),
+            iconBadgeView.heightAnchor.constraint(equalToConstant: 32),
             iconImageView.centerXAnchor.constraint(equalTo: iconBadgeView.centerXAnchor),
             iconImageView.centerYAnchor.constraint(equalTo: iconBadgeView.centerYAnchor),
-            iconImageView.widthAnchor.constraint(equalToConstant: 17),
-            iconImageView.heightAnchor.constraint(equalToConstant: 17)
+            iconImageView.widthAnchor.constraint(equalToConstant: 15),
+            iconImageView.heightAnchor.constraint(equalToConstant: 15)
         ])
     }
 
@@ -115,10 +115,10 @@ class BaseCardView: UIView {
             containerView.trailingAnchor.constraint(equalTo: trailingAnchor),
             containerView.bottomAnchor.constraint(equalTo: bottomAnchor),
 
-            mainStackView.topAnchor.constraint(equalTo: containerView.topAnchor, constant: 16),
-            mainStackView.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 16),
-            mainStackView.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -16),
-            mainStackView.bottomAnchor.constraint(equalTo: containerView.bottomAnchor, constant: -16)
+            mainStackView.topAnchor.constraint(equalTo: containerView.topAnchor, constant: WraithSpacing.space16),
+            mainStackView.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: WraithSpacing.space16),
+            mainStackView.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -WraithSpacing.space16),
+            mainStackView.bottomAnchor.constraint(equalTo: containerView.bottomAnchor, constant: -WraithSpacing.space16)
         ])
     }
 

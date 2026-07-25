@@ -15,8 +15,8 @@ final class TravelerCountCardView: BaseCardView, TripCreationCardUpdating {
         let button = UIButton(type: .system)
         button.setImage(UIImage(systemName: "minus"), for: .normal)
         button.tintColor = TripAccentTheme.accent
-        button.backgroundColor = .tertiarySystemGroupedBackground
-        button.layer.cornerRadius = 16
+        button.backgroundColor = .wraithSurfaceVariant
+        button.layer.cornerRadius = WraithRadius.radius16
         button.clipsToBounds = true
         button.translatesAutoresizingMaskIntoConstraints = false
         button.addTarget(self, action: #selector(didTapMinusButton), for: .touchUpInside)
@@ -27,8 +27,8 @@ final class TravelerCountCardView: BaseCardView, TripCreationCardUpdating {
         let button = UIButton(type: .system)
         button.setImage(UIImage(systemName: "plus"), for: .normal)
         button.tintColor = TripAccentTheme.accent
-        button.backgroundColor = .tertiarySystemGroupedBackground
-        button.layer.cornerRadius = 16
+        button.backgroundColor = .wraithSurfaceVariant
+        button.layer.cornerRadius = WraithRadius.radius16
         button.clipsToBounds = true
         button.translatesAutoresizingMaskIntoConstraints = false
         button.addTarget(self, action: #selector(didTapPlusButton), for: .touchUpInside)
@@ -38,7 +38,7 @@ final class TravelerCountCardView: BaseCardView, TripCreationCardUpdating {
     private lazy var countLabel: UILabel = {
         let label = UILabel()
         label.font = .systemFont(ofSize: 17, weight: .semibold)
-        label.textColor = .label
+        label.textColor = .wraithOnSurface
         label.textAlignment = .center
         label.translatesAutoresizingMaskIntoConstraints = false
         return label
@@ -48,7 +48,7 @@ final class TravelerCountCardView: BaseCardView, TripCreationCardUpdating {
         let stack = UIStackView(arrangedSubviews: [minusButton, countLabel, plusButton])
         stack.axis = .horizontal
         stack.alignment = .center
-        stack.spacing = 16
+        stack.spacing = WraithSpacing.space16
         stack.translatesAutoresizingMaskIntoConstraints = false
         return stack
     }()
