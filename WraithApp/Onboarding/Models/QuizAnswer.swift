@@ -13,13 +13,3 @@ struct QuizAnswer: Codable {
     let selectedOptionTitle: String
     let selectedOptionValue: String
 }
-
-struct CharacterAnalysisSubmission: Codable {
-    let answers: [QuizAnswer]
-
-    var jsonData: Data? {
-        let encoder = JSONEncoder()
-        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-        return try? encoder.encode(self)
-    }
-}

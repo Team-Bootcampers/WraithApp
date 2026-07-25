@@ -157,6 +157,7 @@
 				DEVELOPMENT_TEAM = L98HF5Z4X2;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = WraithApp/App/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Voya;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
@@ -188,6 +189,7 @@
 				DEVELOPMENT_TEAM = L98HF5Z4X2;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = WraithApp/App/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Voya;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";

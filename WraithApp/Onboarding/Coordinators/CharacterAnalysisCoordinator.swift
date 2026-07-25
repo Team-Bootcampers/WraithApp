@@ -13,6 +13,7 @@ final class CharacterAnalysisCoordinator: NSObject, Coordinator {
 
     var onCancelled: (() -> Void)?
     var onFinished: (([QuizAnswer]) -> Void)?
+    var onSkipped: (() -> Void)?
 
     // MARK: - Properties
 
@@ -63,28 +64,35 @@ final class CharacterAnalysisCoordinator: NSObject, Coordinator {
         }
 
         questionVC.onNext = { [weak self] selectedOption in
-            guard let self else { return }
-            self.answers[index] = selectedOption
-            if index + 1 < self.questions.count {
-                self.showQuestion(at: index + 1)
-            } else {
-                let quizAnswers = self.questions.indices.compactMap { questionIndex -> QuizAnswer? in
-                    guard let answer = self.answers[questionIndex] else { return nil }
-                    return QuizAnswer(
-                        questionIndex: questionIndex + 1,
-                        question: self.questions[questionIndex].title,
-                        selectedOptionTitle: answer.title,
-                        selectedOptionValue: answer.value
-                    )
-                }
-                self.onFinished?(quizAnswers)
-            }
+            self?.advance(from: index, selection: selectedOption)
+        }
+
+        questionVC.onSkip = { [weak self] in
+            self?.onSkipped?()
         }
 
         if index == 0 {
             navigationController.setViewControllers([questionVC], animated: false)
         } else {
             navigationController.pushViewController(questionVC, animated: true)
+        }
+    }
+
+    private func advance(from index: Int, selection: QuizOption?) {
+        answers[index] = selection
+        if index + 1 < questions.count {
+            showQuestion(at: index + 1)
+        } else {
+            let quizAnswers = questions.indices.compactMap { questionIndex -> QuizAnswer? in
+                guard let answer = answers[questionIndex] else { return nil }
+                return QuizAnswer(
+                    questionIndex: questionIndex + 1,
+                    question: questions[questionIndex].title,
+                    selectedOptionTitle: answer.title,
+                    selectedOptionValue: answer.value
+                )
+            }
+            onFinished?(quizAnswers)
         }
     }
 }

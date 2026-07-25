@@ -13,6 +13,7 @@ final class CharacterAnalysisQuestionViewController: UIViewController {
 
     var onBack: (() -> Void)?
     var onNext: ((QuizOption) -> Void)?
+    var onSkip: (() -> Void)?
 
     // MARK: - Data
 
@@ -31,7 +32,28 @@ final class CharacterAnalysisQuestionViewController: UIViewController {
         var config = UIButton.Configuration.plain()
         config.title = "Geri"
         config.baseForegroundColor = .wraithPrimary
-        config.contentInsets = NSDirectionalEdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16)
+        config.contentInsets = NSDirectionalEdgeInsets(
+            top: WraithSpacing.space8,
+            leading: WraithSpacing.space16,
+            bottom: WraithSpacing.space8,
+            trailing: WraithSpacing.space16
+        )
+        button.configuration = config
+        button.translatesAutoresizingMaskIntoConstraints = false
+        return button
+    }()
+
+    private let skipButton: UIButton = {
+        let button = UIButton(type: .system)
+        var config = UIButton.Configuration.plain()
+        config.title = "Geç"
+        config.baseForegroundColor = .wraithOnSurfaceVariant
+        config.contentInsets = NSDirectionalEdgeInsets(
+            top: WraithSpacing.space8,
+            leading: WraithSpacing.space16,
+            bottom: WraithSpacing.space8,
+            trailing: WraithSpacing.space16
+        )
         button.configuration = config
         button.translatesAutoresizingMaskIntoConstraints = false
         return button
@@ -57,7 +79,7 @@ final class CharacterAnalysisQuestionViewController: UIViewController {
         let view = UIView()
         view.translatesAutoresizingMaskIntoConstraints = false
         view.backgroundColor = .wraithSurfaceVariant
-        view.layer.cornerRadius = 3
+        view.layer.cornerRadius = WraithRadius.radius3
         view.clipsToBounds = true
         return view
     }()
@@ -76,7 +98,7 @@ final class CharacterAnalysisQuestionViewController: UIViewController {
         let view = UIView()
         view.translatesAutoresizingMaskIntoConstraints = false
         view.backgroundColor = UIColor.wraithPrimary.withAlphaComponent(0.1)
-        view.layer.cornerRadius = 38
+        view.layer.cornerRadius = WraithRadius.radius38
         return view
     }()
 
@@ -101,7 +123,7 @@ final class CharacterAnalysisQuestionViewController: UIViewController {
         let stack = UIStackView()
         stack.translatesAutoresizingMaskIntoConstraints = false
         stack.axis = .vertical
-        stack.spacing = 12
+        stack.spacing = WraithSpacing.space12
         return stack
     }()
 
@@ -176,6 +198,7 @@ final class CharacterAnalysisQuestionViewController: UIViewController {
         contentView.translatesAutoresizingMaskIntoConstraints = false
 
         view.addSubview(backButton)
+        view.addSubview(skipButton)
         view.addSubview(scrollView)
         view.addSubview(nextButton)
         scrollView.addSubview(contentView)
@@ -190,13 +213,16 @@ final class CharacterAnalysisQuestionViewController: UIViewController {
         contentView.addSubview(optionsStackView)
 
         NSLayoutConstraint.activate([
-            backButton.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 4),
-            backButton.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 12),
+            backButton.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: WraithSpacing.space4),
+            backButton.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: WraithSpacing.space12),
 
-            scrollView.topAnchor.constraint(equalTo: backButton.bottomAnchor, constant: 8),
+            skipButton.centerYAnchor.constraint(equalTo: backButton.centerYAnchor),
+            skipButton.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -WraithSpacing.space12),
+
+            scrollView.topAnchor.constraint(equalTo: backButton.bottomAnchor, constant: WraithSpacing.space8),
             scrollView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             scrollView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            scrollView.bottomAnchor.constraint(equalTo: nextButton.topAnchor, constant: -16),
+            scrollView.bottomAnchor.constraint(equalTo: nextButton.topAnchor, constant: -WraithSpacing.space16),
 
             contentView.topAnchor.constraint(equalTo: scrollView.topAnchor),
             contentView.leadingAnchor.constraint(equalTo: scrollView.leadingAnchor),
@@ -204,22 +230,22 @@ final class CharacterAnalysisQuestionViewController: UIViewController {
             contentView.bottomAnchor.constraint(equalTo: scrollView.bottomAnchor),
             contentView.widthAnchor.constraint(equalTo: scrollView.widthAnchor),
 
-            progressLabel.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 8),
-            progressLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 24),
+            progressLabel.topAnchor.constraint(equalTo: contentView.topAnchor, constant: WraithSpacing.space8),
+            progressLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: WraithSpacing.space24),
 
             progressPercentLabel.centerYAnchor.constraint(equalTo: progressLabel.centerYAnchor),
-            progressPercentLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -24),
+            progressPercentLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -WraithSpacing.space24),
 
-            progressTrackView.topAnchor.constraint(equalTo: progressLabel.bottomAnchor, constant: 8),
-            progressTrackView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 24),
-            progressTrackView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -24),
+            progressTrackView.topAnchor.constraint(equalTo: progressLabel.bottomAnchor, constant: WraithSpacing.space8),
+            progressTrackView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: WraithSpacing.space24),
+            progressTrackView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -WraithSpacing.space24),
             progressTrackView.heightAnchor.constraint(equalToConstant: 6),
 
             progressFillView.leadingAnchor.constraint(equalTo: progressTrackView.leadingAnchor),
             progressFillView.topAnchor.constraint(equalTo: progressTrackView.topAnchor),
             progressFillView.bottomAnchor.constraint(equalTo: progressTrackView.bottomAnchor),
 
-            iconContainerView.topAnchor.constraint(equalTo: progressTrackView.bottomAnchor, constant: 28),
+            iconContainerView.topAnchor.constraint(equalTo: progressTrackView.bottomAnchor, constant: WraithSpacing.space28),
             iconContainerView.centerXAnchor.constraint(equalTo: contentView.centerXAnchor),
             iconContainerView.widthAnchor.constraint(equalToConstant: 76),
             iconContainerView.heightAnchor.constraint(equalToConstant: 76),
@@ -229,23 +255,24 @@ final class CharacterAnalysisQuestionViewController: UIViewController {
             iconImageView.widthAnchor.constraint(equalToConstant: 38),
             iconImageView.heightAnchor.constraint(equalToConstant: 38),
 
-            titleLabel.topAnchor.constraint(equalTo: iconContainerView.bottomAnchor, constant: 20),
-            titleLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 24),
-            titleLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -24),
+            titleLabel.topAnchor.constraint(equalTo: iconContainerView.bottomAnchor, constant: WraithSpacing.space20),
+            titleLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: WraithSpacing.space24),
+            titleLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -WraithSpacing.space24),
 
-            optionsStackView.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 32),
-            optionsStackView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 24),
-            optionsStackView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -24),
-            optionsStackView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -24),
+            optionsStackView.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: WraithSpacing.space32),
+            optionsStackView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: WraithSpacing.space24),
+            optionsStackView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -WraithSpacing.space24),
+            optionsStackView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -WraithSpacing.space24),
 
-            nextButton.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 24),
-            nextButton.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -24),
-            nextButton.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -16)
+            nextButton.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: WraithSpacing.space24),
+            nextButton.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -WraithSpacing.space24),
+            nextButton.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -WraithSpacing.space16)
         ])
     }
 
     private func setupActions() {
         backButton.addTarget(self, action: #selector(didTapBack), for: .touchUpInside)
+        skipButton.addTarget(self, action: #selector(didTapSkip), for: .touchUpInside)
         nextButton.addTarget(self, action: #selector(didTapNext), for: .touchUpInside)
     }
 
@@ -338,6 +365,10 @@ final class CharacterAnalysisQuestionViewController: UIViewController {
 
     @objc private func didTapBack() {
         onBack?()
+    }
+
+    @objc private func didTapSkip() {
+        onSkip?()
     }
 
     @objc private func didTapNext() {

@@ -12,7 +12,7 @@ final class AnalyzingViewController: UIViewController {
     private let outerRingView: UIView = {
         let view = UIView()
         view.translatesAutoresizingMaskIntoConstraints = false
-        view.layer.borderWidth = 1
+        view.layer.borderWidth = WraithBorderWidth.hairline
         view.layer.borderColor = UIColor.wraithPrimary.withAlphaComponent(0.25).cgColor
         return view
     }()
@@ -20,7 +20,7 @@ final class AnalyzingViewController: UIViewController {
     private let innerRingView: UIView = {
         let view = UIView()
         view.translatesAutoresizingMaskIntoConstraints = false
-        view.layer.borderWidth = 1
+        view.layer.borderWidth = WraithBorderWidth.hairline
         view.layer.borderColor = UIColor.wraithSecondary.withAlphaComponent(0.3).cgColor
         return view
     }()
@@ -57,7 +57,7 @@ final class AnalyzingViewController: UIViewController {
         let view = UIView()
         view.translatesAutoresizingMaskIntoConstraints = false
         view.backgroundColor = .wraithSurfaceVariant
-        view.layer.cornerRadius = 2
+        view.layer.cornerRadius = WraithRadius.radius2
         view.clipsToBounds = true
         return view
     }()
@@ -66,9 +66,11 @@ final class AnalyzingViewController: UIViewController {
         let view = UIView()
         view.translatesAutoresizingMaskIntoConstraints = false
         view.backgroundColor = .wraithPrimary
-        view.layer.cornerRadius = 2
+        view.layer.cornerRadius = WraithRadius.radius2
         return view
     }()
+
+    private let coreGradientLayer = CAGradientLayer()
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -88,6 +90,13 @@ final class AnalyzingViewController: UIViewController {
         startAnimations()
     }
 
+    override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
+        super.traitCollectionDidChange(previousTraitCollection)
+        outerRingView.layer.borderColor = UIColor.wraithPrimary.withAlphaComponent(0.25).cgColor
+        innerRingView.layer.borderColor = UIColor.wraithSecondary.withAlphaComponent(0.3).cgColor
+        coreGradientLayer.colors = [UIColor.wraithPrimary.cgColor, UIColor.wraithSecondary.cgColor]
+    }
+
     private func setupLayout() {
         view.addSubview(outerRingView)
         view.addSubview(innerRingView)
@@ -97,19 +106,18 @@ final class AnalyzingViewController: UIViewController {
         view.addSubview(progressTrackView)
         progressTrackView.addSubview(progressFillView)
 
-        let coreGradientLayer = CAGradientLayer()
         coreGradientLayer.colors = [UIColor.wraithPrimary.cgColor, UIColor.wraithSecondary.cgColor]
         coreGradientLayer.startPoint = CGPoint(x: 0, y: 0)
         coreGradientLayer.endPoint = CGPoint(x: 1, y: 1)
         coreGradientLayer.frame = CGRect(x: 0, y: 0, width: 56, height: 56)
-        coreGradientLayer.cornerRadius = 28
+        coreGradientLayer.cornerRadius = WraithRadius.radius28
         coreView.layer.insertSublayer(coreGradientLayer, at: 0)
 
         NSLayoutConstraint.activate([
             outerRingView.widthAnchor.constraint(equalToConstant: 176),
             outerRingView.heightAnchor.constraint(equalToConstant: 176),
             outerRingView.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            outerRingView.centerYAnchor.constraint(equalTo: view.centerYAnchor, constant: -80),
+            outerRingView.centerYAnchor.constraint(equalTo: view.centerYAnchor, constant: -WraithSpacing.space80),
 
             innerRingView.widthAnchor.constraint(equalToConstant: 128),
             innerRingView.heightAnchor.constraint(equalToConstant: 128),
@@ -121,15 +129,15 @@ final class AnalyzingViewController: UIViewController {
             coreView.centerXAnchor.constraint(equalTo: outerRingView.centerXAnchor),
             coreView.centerYAnchor.constraint(equalTo: outerRingView.centerYAnchor),
 
-            titleLabel.topAnchor.constraint(equalTo: outerRingView.bottomAnchor, constant: 40),
-            titleLabel.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 32),
-            titleLabel.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -32),
+            titleLabel.topAnchor.constraint(equalTo: outerRingView.bottomAnchor, constant: WraithSpacing.space40),
+            titleLabel.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: WraithSpacing.space32),
+            titleLabel.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -WraithSpacing.space32),
 
-            subtitleLabel.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 12),
-            subtitleLabel.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 32),
-            subtitleLabel.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -32),
+            subtitleLabel.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: WraithSpacing.space12),
+            subtitleLabel.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: WraithSpacing.space32),
+            subtitleLabel.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -WraithSpacing.space32),
 
-            progressTrackView.topAnchor.constraint(equalTo: subtitleLabel.bottomAnchor, constant: 28),
+            progressTrackView.topAnchor.constraint(equalTo: subtitleLabel.bottomAnchor, constant: WraithSpacing.space28),
             progressTrackView.centerXAnchor.constraint(equalTo: view.centerXAnchor),
             progressTrackView.widthAnchor.constraint(equalToConstant: 160),
             progressTrackView.heightAnchor.constraint(equalToConstant: 4),
