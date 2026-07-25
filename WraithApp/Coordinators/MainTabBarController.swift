@@ -8,11 +8,25 @@
 import UIKit
 
 /// Root tab bar shown after onboarding: Anasayfa, Yeni Seyahat, Seyahatlerim, Profil.
-/// Each tab's own screen keeps whatever navigation-bar buttons it already defines
-/// (e.g. Home's top-right profile icon and its own "Yeni Seyahat Oluştur" button).
 final class MainTabBarController: UITabBarController {
 
+    enum InitialTab {
+        case home
+        case tripCreation
+    }
+
     var onRequestRetakeOnboarding: (() -> Void)?
+
+    private let initialTab: InitialTab
+
+    init(initialTab: InitialTab = .home) {
+        self.initialTab = initialTab
+        super.init(nibName: nil, bundle: nil)
+    }
+
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -34,25 +48,6 @@ final class MainTabBarController: UITabBarController {
     }
 
     private func setupViewControllers() {
-        let homeVC = HomeViewController()
-        homeVC.onRequestRetakeOnboarding = { [weak self] in
-            self?.onRequestRetakeOnboarding?()
-        }
-        let homeTab = wrap(
-            homeVC,
-            title: "Anasayfa",
-            image: UIImage(systemName: "house"),
-            selectedImage: UIImage(systemName: "house.fill")
-        )
-
-        let tripCreationVC = TripCreationViewController()
-        let tripCreationTab = wrap(
-            tripCreationVC,
-            title: "Yeni Seyahat",
-            image: UIImage(systemName: "suitcase"),
-            selectedImage: UIImage(systemName: "suitcase.fill")
-        )
-
         let myTripsTab = wrap(
             MyTripsViewController(),
             title: "Seyahatlerim",
@@ -60,8 +55,11 @@ final class MainTabBarController: UITabBarController {
             selectedImage: UIImage(systemName: "airplane.circle.fill")
         )
 
-        tripCreationVC.onTripSaved = { [weak self, weak myTripsTab] savedTrip in
+        let showSavedTrip: (SavedTrip) -> Void = { [weak self, weak myTripsTab] savedTrip in
             guard let self, let myTripsTab else { return }
+            // Unwind whichever tab produced the trip so returning to it later starts clean.
+            (self.selectedViewController as? UINavigationController)?.popToRootViewController(animated: false)
+
             if let index = self.viewControllers?.firstIndex(of: myTripsTab) {
                 self.selectedIndex = index
             }
@@ -70,10 +68,28 @@ final class MainTabBarController: UITabBarController {
             myTripsTab.pushViewController(TripSummaryViewController(viewModel: summaryViewModel), animated: true)
         }
 
+        let homeVC = HomeViewController()
+        let homeTab = wrap(
+            homeVC,
+            title: "Anasayfa",
+            image: UIImage(systemName: "house"),
+            selectedImage: UIImage(systemName: "house.fill")
+        )
+
+        let tripCreationVC = TripCreationViewController()
+        tripCreationVC.onTripSaved = showSavedTrip
+        let tripCreationTab = wrap(
+            tripCreationVC,
+            title: "Yeni Seyahat",
+            image: UIImage(systemName: "suitcase"),
+            selectedImage: UIImage(systemName: "suitcase.fill")
+        )
+
         let profileVC = ProfileViewController()
         profileVC.onRequestRetakeOnboarding = { [weak self] in
             self?.onRequestRetakeOnboarding?()
         }
+        profileVC.onTripSaved = showSavedTrip
         let profileTab = wrap(
             profileVC,
             title: "Profil",
@@ -82,6 +98,13 @@ final class MainTabBarController: UITabBarController {
         )
 
         viewControllers = [homeTab, tripCreationTab, myTripsTab, profileTab]
+
+        switch initialTab {
+        case .home:
+            break
+        case .tripCreation:
+            selectedIndex = 1
+        }
     }
 
     private func wrap(_ viewController: UIViewController, title: String, image: UIImage?, selectedImage: UIImage?) -> UINavigationController {

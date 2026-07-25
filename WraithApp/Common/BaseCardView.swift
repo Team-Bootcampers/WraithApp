@@ -147,4 +147,9 @@ class BaseCardView: UIView {
     func updateTitle(_ title: String) {
         titleLabel.text = title
     }
+
+    /// Companion to `updateTitle(_:)` for cards whose header icon is data-driven.
+    func updateIcon(systemName: String) {
+        iconImageView.image = UIImage(systemName: systemName)
+    }
 }

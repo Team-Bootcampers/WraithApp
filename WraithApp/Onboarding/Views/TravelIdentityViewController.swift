@@ -145,7 +145,7 @@ final class TravelIdentityViewController: UIViewController {
     // MARK: - Setup
 
     private func setupContent() {
-        titleLabel.text = "Siz Bir \"\(result.title)\"siniz!"
+        titleLabel.text = result.title
         summaryLabel.text = result.summary
         insightTitleLabel.text = result.insightTitle
         insightDescriptionLabel.text = result.insightDescription
