@@ -194,7 +194,19 @@ extension HomeViewController: UITableViewDataSource, UITableViewDelegate {
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         tableView.deselectRow(at: indexPath, animated: true)
         let trip = viewModel.trips[indexPath.row]
-        navigationController?.pushViewController(TripDetailViewController(trip: trip), animated: true)
+        let preview = BrowsedTripPreview(
+            id: trip.id,
+            title: trip.title,
+            description: trip.description,
+            imageURL: trip.imageURL,
+            rating: trip.rating,
+            reviewCount: trip.reviewCount,
+            durationInDays: trip.durationInDays,
+            price: trip.price,
+            currency: trip.currency
+        )
+        let summaryViewModel = TripSummaryViewModel(browsedTripPreview: preview)
+        navigationController?.pushViewController(TripSummaryViewController(viewModel: summaryViewModel), animated: true)
     }
 }
 

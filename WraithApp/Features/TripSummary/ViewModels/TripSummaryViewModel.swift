@@ -9,11 +9,45 @@ import Foundation
 
 final class TripSummaryViewModel {
 
+    /// Where the summary being displayed came from: a fully-built itinerary saved through
+    /// Trip Creation, or a Home card the user is browsing that hasn't been saved yet.
+    enum Source {
+        case savedTrip(SavedTrip)
+        case browsedPreview(BrowsedTripPreview)
+    }
+
     // MARK: - Properties
 
-    let trip: SavedTrip
+    private(set) var source: Source
 
-    var stops: [TripStopSnapshot] { trip.stops }
+    /// Non-nil whenever a persisted `SavedTrip` backs this screen — a browsed-but-unsaved
+    /// preview has no id yet, so anything requiring one (e.g. publishing) needs this.
+    var savedTrip: SavedTrip? {
+        switch source {
+        case .savedTrip(let trip): return trip
+        case .browsedPreview: return nil
+        }
+    }
+
+    /// Present for a Home-originated trip whether or not it's been saved yet, so the
+    /// hero header can render the same info the user saw on the card.
+    var browsedTripPreview: BrowsedTripPreview? {
+        switch source {
+        case .savedTrip(let trip): return trip.browsedTripPreview
+        case .browsedPreview(let preview): return preview
+        }
+    }
+
+    /// True only for a browsed trip that hasn't been persisted yet — once saved (or if it
+    /// was a Trip Creation itinerary all along) there's nothing left to save.
+    var canSaveBrowsedTrip: Bool {
+        if case .browsedPreview = source { return true }
+        return false
+    }
+
+    var isPublic: Bool { savedTrip?.isPublic ?? false }
+
+    var stops: [TripStopSnapshot] { savedTrip?.stops ?? [] }
 
     var totalCost: Int {
         stops.reduce(0) { $0 + totalCost(for: $1) }
@@ -29,8 +63,46 @@ final class TripSummaryViewModel {
 
     // MARK: - Init
 
-    init(trip: SavedTrip) {
-        self.trip = trip
+    init(source: Source) {
+        self.source = source
+    }
+
+    convenience init(trip: SavedTrip) {
+        self.init(source: .savedTrip(trip))
+    }
+
+    convenience init(browsedTripPreview: BrowsedTripPreview) {
+        self.init(source: .browsedPreview(browsedTripPreview))
+    }
+
+    // MARK: - Public
+
+    /// Persists a browsed-but-unsaved preview into "Seyahatlerim". Returns `nil` (and does
+    /// nothing) if this screen is already backed by a saved trip.
+    @discardableResult
+    func saveBrowsedTrip() -> SavedTrip? {
+        guard case .browsedPreview(let preview) = source else { return nil }
+        let savedTrip = SavedTrip(browsedTripPreview: preview)
+        TripStore.shared.save(savedTrip)
+        source = .savedTrip(savedTrip)
+        return savedTrip
+    }
+
+    /// Flips `isPublic` on the underlying saved trip and persists it. Returns `nil` (and
+    /// does nothing) if this screen isn't backed by a persisted trip yet.
+    @discardableResult
+    func setPublic(_ isPublic: Bool) -> SavedTrip? {
+        guard let trip = savedTrip else { return nil }
+        let updatedTrip = SavedTrip(
+            id: trip.id,
+            createdAt: trip.createdAt,
+            stops: trip.stops,
+            browsedTripPreview: trip.browsedTripPreview,
+            isPublic: isPublic
+        )
+        TripStore.shared.save(updatedTrip)
+        source = .savedTrip(updatedTrip)
+        return updatedTrip
     }
 
     // MARK: - Cost Calculation

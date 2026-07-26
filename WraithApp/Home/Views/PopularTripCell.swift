@@ -89,9 +89,29 @@ final class PopularTripCell: UITableViewCell {
         return label
     }()
 
-    /// A trailing flexible spacer absorbs any leftover width so the rating icon, score
-    /// and review count stay tightly packed together on the leading edge instead of the
-    /// stack view spreading them apart when it's stretched to the card's full width.
+    private lazy var durationIconImageView: UIImageView = {
+        let imageView = UIImageView(image: UIImage(systemName: "clock.fill"))
+        imageView.tintColor = UIColor.wraithOnPrimary.withAlphaComponent(0.8)
+        imageView.contentMode = .scaleAspectFit
+        imageView.setContentHuggingPriority(.required, for: .horizontal)
+        imageView.setContentCompressionResistancePriority(.required, for: .horizontal)
+        imageView.translatesAutoresizingMaskIntoConstraints = false
+        return imageView
+    }()
+
+    private lazy var durationLabel: UILabel = {
+        let label = UILabel()
+        label.font = .systemFont(ofSize: 13, weight: .regular)
+        label.textColor = UIColor.wraithOnPrimary.withAlphaComponent(0.8)
+        label.setContentHuggingPriority(.required, for: .horizontal)
+        label.setContentCompressionResistancePriority(.required, for: .horizontal)
+        label.translatesAutoresizingMaskIntoConstraints = false
+        return label
+    }()
+
+    /// A trailing flexible spacer absorbs any leftover width so the rating icon, score,
+    /// review count and duration stay tightly packed together on the leading edge instead
+    /// of the stack view spreading them apart when it's stretched to the card's full width.
     private lazy var ratingTrailingSpacerView: UIView = {
         let view = UIView()
         view.setContentHuggingPriority(.defaultLow - 1, for: .horizontal)
@@ -100,10 +120,15 @@ final class PopularTripCell: UITableViewCell {
     }()
 
     private lazy var ratingStackView: UIStackView = {
-        let stack = UIStackView(arrangedSubviews: [ratingIconImageView, ratingLabel, reviewCountLabel, ratingTrailingSpacerView])
+        let stack = UIStackView(arrangedSubviews: [
+            ratingIconImageView, ratingLabel, reviewCountLabel,
+            durationIconImageView, durationLabel,
+            ratingTrailingSpacerView
+        ])
         stack.axis = .horizontal
         stack.alignment = .center
         stack.spacing = WraithSpacing.space4
+        stack.setCustomSpacing(WraithSpacing.space12, after: reviewCountLabel)
         stack.translatesAutoresizingMaskIntoConstraints = false
         return stack
     }()
@@ -228,6 +253,9 @@ final class PopularTripCell: UITableViewCell {
             ratingIconImageView.widthAnchor.constraint(equalToConstant: 14),
             ratingIconImageView.heightAnchor.constraint(equalToConstant: 14),
 
+            durationIconImageView.widthAnchor.constraint(equalToConstant: 14),
+            durationIconImageView.heightAnchor.constraint(equalToConstant: 14),
+
             detailChevronImageView.widthAnchor.constraint(equalToConstant: 44),
             detailChevronImageView.heightAnchor.constraint(equalToConstant: 44)
         ])
@@ -241,6 +269,7 @@ final class PopularTripCell: UITableViewCell {
         titleLabel.text = nil
         ratingLabel.text = nil
         reviewCountLabel.text = nil
+        durationLabel.text = nil
         descriptionLabel.text = nil
         priceLabel.text = nil
         onFavoriteTap = nil
@@ -254,6 +283,7 @@ final class PopularTripCell: UITableViewCell {
         titleLabel.text = trip.title
         ratingLabel.text = String(format: "%.1f", trip.rating)
         reviewCountLabel.text = "(\(trip.reviewCount))"
+        durationLabel.text = trip.durationText
         descriptionLabel.text = trip.description
         priceLabel.text = formattedPrice(trip.price, currency: trip.currency)
         setFavorite(trip.isFavorite)
