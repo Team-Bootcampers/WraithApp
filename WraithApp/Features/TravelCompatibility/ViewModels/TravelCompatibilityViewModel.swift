@@ -81,9 +81,9 @@ final class TravelCompatibilityViewModel {
         return plan
     }
 
-    func save() -> SavedTrip? {
+    func save() async -> SavedTrip? {
         guard let jointPlan else { return nil }
-        TripStore.shared.save(jointPlan.trip)
+        await TripRepository.shared.create(jointPlan.trip)
         return jointPlan.trip
     }
 }

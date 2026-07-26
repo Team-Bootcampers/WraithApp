@@ -191,8 +191,10 @@ final class TravelCompatibilityViewController: UIViewController {
     }
 
     @objc private func didTapSave() {
-        guard let trip = viewModel.save() else { return }
-        onTripSaved?(trip)
+        Task { [weak self] in
+            guard let self, let trip = await viewModel.save() else { return }
+            onTripSaved?(trip)
+        }
     }
 
     private func copyMyCode() {

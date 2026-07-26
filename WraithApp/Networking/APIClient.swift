@@ -68,6 +68,17 @@ final class APIClient {
         _ = try await sendRaw(urlRequest)
     }
 
+    func requestNoContent<Body: Encodable>(
+        path: String,
+        method: String,
+        body: Body,
+        authToken: String? = nil
+    ) async throws {
+        var urlRequest = try makeURLRequest(path: path, method: method, authToken: authToken)
+        urlRequest.httpBody = try JSONEncoder().encode(body)
+        _ = try await sendRaw(urlRequest)
+    }
+
     private func decode<Response: Decodable>(_ data: Data) throws -> Response {
         do {
             return try JSONDecoder().decode(Response.self, from: data)

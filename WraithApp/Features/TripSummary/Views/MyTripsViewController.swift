@@ -68,6 +68,15 @@ final class MyTripsViewController: UIViewController {
         return label
     }()
 
+    private let loadingIndicator: UIActivityIndicatorView = {
+        let indicator = UIActivityIndicatorView(style: .medium)
+        indicator.translatesAutoresizingMaskIntoConstraints = false
+        indicator.hidesWhenStopped = true
+        return indicator
+    }()
+
+    private var trips: [SavedTrip] = []
+
     private lazy var emptyStateView: UIView = {
         let container = UIView()
         container.translatesAutoresizingMaskIntoConstraints = false
@@ -112,6 +121,7 @@ final class MyTripsViewController: UIViewController {
     private func setupLayout() {
         view.addSubview(scrollView)
         scrollView.addSubview(tripsStackView)
+        view.addSubview(loadingIndicator)
 
         NSLayoutConstraint.activate([
             scrollView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
@@ -123,14 +133,30 @@ final class MyTripsViewController: UIViewController {
             tripsStackView.leadingAnchor.constraint(equalTo: scrollView.leadingAnchor, constant: WraithSpacing.space24),
             tripsStackView.trailingAnchor.constraint(equalTo: scrollView.trailingAnchor, constant: -WraithSpacing.space24),
             tripsStackView.bottomAnchor.constraint(equalTo: scrollView.bottomAnchor, constant: -WraithSpacing.space24),
-            tripsStackView.widthAnchor.constraint(equalTo: scrollView.widthAnchor, constant: -WraithSpacing.space24 * 2)
+            tripsStackView.widthAnchor.constraint(equalTo: scrollView.widthAnchor, constant: -WraithSpacing.space24 * 2),
+
+            loadingIndicator.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            loadingIndicator.topAnchor.constraint(equalTo: scrollView.topAnchor, constant: WraithSpacing.space80)
         ])
     }
 
     private func reload() {
+        loadingIndicator.startAnimating()
+        Task { [weak self] in
+            guard let self else { return }
+            trips = await TripRepository.shared.loadTrips()
+            print("🧳 [MyTrips] \(trips.count) trip(s) loaded for user \(UserSession.shared.userId ?? "guest"):")
+            trips.forEach {
+                print(" - id: \($0.id), title: \(title(for: $0)), stops: \($0.stops.count), isPublic: \($0.isPublic)")
+            }
+            loadingIndicator.stopAnimating()
+            render()
+        }
+    }
+
+    private func render() {
         tripsStackView.arrangedSubviews.forEach { $0.removeFromSuperview() }
 
-        let trips = TripStore.shared.loadTrips()
         guard !trips.isEmpty else {
             tripsStackView.addArrangedSubview(emptyStateView)
             NSLayoutConstraint.activate([
@@ -173,7 +199,6 @@ final class MyTripsViewController: UIViewController {
     }
 
     @objc private func didTapTrip(_ sender: TripCardView) {
-        let trips = TripStore.shared.loadTrips()
         guard trips.indices.contains(sender.tag) else { return }
         let summaryViewModel = TripSummaryViewModel(trip: trips[sender.tag])
         let summaryViewController = TripSummaryViewController(viewModel: summaryViewModel)

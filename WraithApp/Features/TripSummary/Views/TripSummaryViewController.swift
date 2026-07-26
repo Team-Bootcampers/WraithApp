@@ -195,10 +195,15 @@ final class TripSummaryViewController: UIViewController {
     }
 
     @objc private func didTapSaveTrip() {
-        guard viewModel.saveBrowsedTrip() != nil else { return }
         saveTripButton.isEnabled = false
-        saveTripButton.configuration?.title = "Kaydedildi"
-        showAlert(title: "Kaydedildi", message: "Seyahat \"Seyahatlerim\" kısmına kaydedildi.")
+        Task { [weak self] in
+            guard let self, await viewModel.saveBrowsedTrip() != nil else {
+                self?.saveTripButton.isEnabled = true
+                return
+            }
+            saveTripButton.configuration?.title = "Kaydedildi"
+            showAlert(title: "Kaydedildi", message: "Seyahat \"Seyahatlerim\" kısmına kaydedildi.")
+        }
     }
 
     @objc private func didTapMakePublic() {
@@ -283,7 +288,7 @@ final class TripSummaryViewController: UIViewController {
             guard let self else { return }
             do {
                 try await publishingService.publishTrip(tripID: id, title: title, description: description)
-                viewModel.setPublic(true)
+                await viewModel.setPublic(true)
                 updatePublicButtonAppearance()
                 showAlert(title: "Paylaşıldı", message: "Seyahatin herkese açık hale getirildi.")
             } catch {
@@ -297,7 +302,7 @@ final class TripSummaryViewController: UIViewController {
             guard let self else { return }
             do {
                 try await publishingService.unpublishTrip(tripID: id)
-                viewModel.setPublic(false)
+                await viewModel.setPublic(false)
                 updatePublicButtonAppearance()
                 showAlert(title: "Kapatıldı", message: "Seyahat artık herkese açık değil.")
             } catch {

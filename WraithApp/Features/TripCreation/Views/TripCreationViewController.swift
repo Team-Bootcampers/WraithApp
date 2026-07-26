@@ -291,26 +291,32 @@ final class TripCreationViewController: UIViewController {
             isPublic: existingTrip?.isPublic ?? false,
             tripPlanPDFFileName: existingTrip?.tripPlanPDFFileName
         )
-        // Save immediately so the trip isn't lost even if the detailed-plan generation below
-        // fails or the user leaves before it finishes.
-        TripStore.shared.save(savedTrip)
-
         saveButton.isEnabled = false
         saveButton.alpha = 0.4
         itineraryLoadingOverlayView.isHidden = false
 
         Task { [weak self] in
             guard let self else { return }
+
             var finalTrip = savedTrip
             do {
                 let fileName = try await TripPlanningService().generatePlanPDF(for: savedTrip)
                 finalTrip.tripPlanPDFFileName = fileName
-                TripStore.shared.save(finalTrip)
             } catch TripPlanningError.missingCharacterAnalysis {
                 // Expected before onboarding is complete — trip stays saved without a PDF.
             } catch {
                 print("TripPlanning generation failed: \(error)")
-                presentPlanGenerationErrorAlert()
+                presentPlanGenerationErrorAlert(isEditingExistingTrip: existingTrip != nil)
+            }
+
+            // Saved once, after the PDF attempt settles either way, so a logged-in trip
+            // isn't pushed to the backend twice for the same creation. A brand-new trip is
+            // POSTed; editing an existing one only updates it locally for now, since the
+            // backend has no update endpoint yet and POSTing again would insert a duplicate.
+            if existingTrip != nil {
+                await TripRepository.shared.update(finalTrip)
+            } else {
+                await TripRepository.shared.create(finalTrip)
             }
 
             itineraryLoadingOverlayView.isHidden = true
@@ -329,10 +335,13 @@ final class TripCreationViewController: UIViewController {
         }
     }
 
-    private func presentPlanGenerationErrorAlert() {
+    private func presentPlanGenerationErrorAlert(isEditingExistingTrip: Bool) {
+        let message = isEditingExistingTrip
+            ? "Değişikliklerin kaydedildi. Detaylı gezi planı şu an yenilenemedi, daha sonra tekrar deneyebilirsin."
+            : "Detaylı gezi planı oluşturulamadı. Seyahatin kaydedildi, planı daha sonra tekrar deneyebilirsin."
         let alert = UIAlertController(
-            title: "Bir Sorun Oluştu",
-            message: "Detaylı gezi planı oluşturulamadı. Seyahatin kaydedildi, planı daha sonra tekrar deneyebilirsin.",
+            title: "Plan Yenilenemedi",
+            message: message,
             preferredStyle: .alert
         )
         alert.addAction(UIAlertAction(title: "Tamam", style: .default))

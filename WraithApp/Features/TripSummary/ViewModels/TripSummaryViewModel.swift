@@ -80,10 +80,10 @@ final class TripSummaryViewModel {
     /// Persists a browsed-but-unsaved preview into "Seyahatlerim". Returns `nil` (and does
     /// nothing) if this screen is already backed by a saved trip.
     @discardableResult
-    func saveBrowsedTrip() -> SavedTrip? {
+    func saveBrowsedTrip() async -> SavedTrip? {
         guard case .browsedPreview(let preview) = source else { return nil }
         let savedTrip = SavedTrip(browsedTripPreview: preview)
-        TripStore.shared.save(savedTrip)
+        await TripRepository.shared.create(savedTrip)
         source = .savedTrip(savedTrip)
         return savedTrip
     }
@@ -91,7 +91,7 @@ final class TripSummaryViewModel {
     /// Flips `isPublic` on the underlying saved trip and persists it. Returns `nil` (and
     /// does nothing) if this screen isn't backed by a persisted trip yet.
     @discardableResult
-    func setPublic(_ isPublic: Bool) -> SavedTrip? {
+    func setPublic(_ isPublic: Bool) async -> SavedTrip? {
         guard let trip = savedTrip else { return nil }
         let updatedTrip = SavedTrip(
             id: trip.id,
@@ -101,7 +101,7 @@ final class TripSummaryViewModel {
             isPublic: isPublic,
             tripPlanPDFFileName: trip.tripPlanPDFFileName
         )
-        TripStore.shared.save(updatedTrip)
+        await TripRepository.shared.update(updatedTrip)
         source = .savedTrip(updatedTrip)
         return updatedTrip
     }

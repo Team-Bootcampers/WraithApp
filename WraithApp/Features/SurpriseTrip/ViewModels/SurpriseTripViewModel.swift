@@ -59,9 +59,9 @@ final class SurpriseTripViewModel {
         isRevealed = true
     }
 
-    func save() -> SavedTrip? {
+    func save() async -> SavedTrip? {
         guard let plan else { return nil }
-        TripStore.shared.save(plan.trip)
+        await TripRepository.shared.create(plan.trip)
         return plan.trip
     }
 }

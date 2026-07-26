@@ -42,6 +42,7 @@ final class AuthCoordinator: Coordinator {
             }
             UserSession.shared.login(user: user, idToken: response.idToken, refreshToken: response.refreshToken)
             await self?.syncOnboardingIfNeeded()
+            await TripSyncService().syncAllSavedTrips()
             self?.finish()
         }
         loginVC.onSwitchToSignUp = { [weak self] in
@@ -63,6 +64,7 @@ final class AuthCoordinator: Coordinator {
             }
             UserSession.shared.login(user: user, idToken: loginResponse.idToken, refreshToken: loginResponse.refreshToken)
             await self?.syncOnboardingIfNeeded()
+            await TripSyncService().syncAllSavedTrips()
             self?.finish()
         }
         signUpVC.onSwitchToLogin = { [weak self] in
