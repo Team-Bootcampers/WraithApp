@@ -12,12 +12,18 @@ final class RestaurantService: RestaurantServiceProtocol {
 
     func fetchRestaurants(country: String, city: String, personalityAnalysis: String) async throws -> [Restaurant] {
         let dtos = try await RestaurantAPI.fetchRestaurants(
-            country: country,
+            country: Self.backendCountryName(for: country),
             city: city,
             personalityAnalysis: personalityAnalysis,
             token: UserSession.shared.idToken
         )
         return dtos.map(Self.makeRestaurant)
+    }
+
+    /// `Country.name` comes from countriesnow.space in English (e.g. "Turkey"), but `/restaurants`
+    /// matches by the Turkish country name and 500s on the English form.
+    private static func backendCountryName(for country: String) -> String {
+        country == "Turkey" ? "Türkiye" : country
     }
 
     private static func makeRestaurant(from dto: RestaurantDto) -> Restaurant {

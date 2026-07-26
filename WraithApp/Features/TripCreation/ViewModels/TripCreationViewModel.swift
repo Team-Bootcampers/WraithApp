@@ -279,13 +279,27 @@ final class TripCreationViewModel {
                 }
             } catch {
                 guard self.draft.selectedCity?.name == city else { return }
-                // Surfaced in the console since there's no in-app diagnostics — check here
-                // first (401 → auth, decoding error → DTO/response mismatch, etc.) if this
-                // still shows up as "unavailable" in the UI.
                 print("⚠️ RestaurantService.fetchRestaurants failed: \(error)")
                 self.draft.isLoadingRestaurants = false
-                self.draft.restaurantsUnavailableReason = "Restoranlar yüklenemedi. Lütfen tekrar dene."
+                self.draft.restaurantsUnavailableReason = Self.restaurantsUnavailableReason(for: error)
             }
+        }
+    }
+
+    private static func restaurantsUnavailableReason(for error: Error) -> String {
+        guard let apiError = error as? APIError else {
+            return "Restoranlar yüklenemedi. Lütfen tekrar dene."
+        }
+
+        switch apiError {
+        case .server(let statusCode, _) where statusCode == 401 || statusCode == 403:
+            return "Restoran önerisi görmek için giriş yapmalısın."
+        case .network:
+            return "İnternet bağlantısı sorunu. Lütfen tekrar dene."
+        case .decoding:
+            return "Restoranlar alınamadı, lütfen daha sonra tekrar dene."
+        case .server, .invalidURL:
+            return "Restoranlar yüklenemedi. Lütfen tekrar dene."
         }
     }
 
