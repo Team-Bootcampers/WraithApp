@@ -37,28 +37,41 @@ final class SortFilterButton: UIButton {
         var configuration = UIButton.Configuration.plain()
         configuration.title = option.title
         configuration.contentInsets = NSDirectionalEdgeInsets(
-            top: WraithSpacing.space8,
-            leading: WraithSpacing.space12,
-            bottom: WraithSpacing.space8,
-            trailing: WraithSpacing.space12
+            top: WraithSpacing.space10,
+            leading: WraithSpacing.space16,
+            bottom: WraithSpacing.space10,
+            trailing: WraithSpacing.space16
         )
         configuration.titleTextAttributesTransformer = UIConfigurationTextAttributesTransformer { incoming in
             var outgoing = incoming
-            outgoing.font = .systemFont(ofSize: 13, weight: .semibold)
+            outgoing.font = .systemFont(ofSize: 14, weight: .semibold)
             return outgoing
         }
         self.configuration = configuration
 
         layer.cornerRadius = WraithRadius.radius18
+        layer.borderWidth = WraithBorderWidth.hairline
         setContentCompressionResistancePriority(.required, for: .horizontal)
         setContentHuggingPriority(.required, for: .horizontal)
+        applyStandardPressAnimation()
+        updateAppearance()
+    }
+
+    // MARK: - Lifecycle
+
+    override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
+        super.traitCollectionDidChange(previousTraitCollection)
         updateAppearance()
     }
 
     // MARK: - Private
 
     private func updateAppearance() {
-        backgroundColor = isSelected ? .wraithPrimary : .wraithSurfaceVariant
+        // Sits on the page background, not another card, so it needs its own fill + hairline
+        // border to read as a chip — matching `wraithSurfaceVariant` (the neutral "inactive"
+        // token) would make it blend straight into the page like it used to.
+        backgroundColor = isSelected ? .wraithPrimary : .wraithSurface
+        layer.borderColor = (isSelected ? UIColor.wraithPrimary : .wraithOutlineVariant).cgColor
         configuration?.baseForegroundColor = isSelected ? .wraithOnPrimary : .wraithOnSurfaceVariant
     }
 }

@@ -28,11 +28,31 @@ final class PopularTripCell: UITableViewCell {
         return view
     }()
 
-    private lazy var imageContainerView: UIView = {
+    /// Hosts the drop shadow — kept separate from `cardContainerView` since a shadow and
+    /// `clipsToBounds` can't coexist on the same layer.
+    private lazy var cardShadowContainerView: UIView = {
         let view = UIView()
+        view.translatesAutoresizingMaskIntoConstraints = false
+        view.applyCardShadow()
+        return view
+    }()
+
+    /// The full card shell (photo + description + price) sits on this — gives the row a
+    /// visible surface of its own instead of its text/price floating directly on the page
+    /// background with only the photo above it looking "card-like".
+    private lazy var cardContainerView: UIView = {
+        let view = UIView()
+        view.backgroundColor = .wraithSurface
         view.layer.cornerRadius = WraithRadius.radius24
         view.layer.borderWidth = WraithBorderWidth.hairline
-        view.layer.borderColor = UIColor.wraithOutline.withAlphaComponent(0.4).cgColor
+        view.layer.borderColor = UIColor.wraithOutlineVariant.cgColor
+        view.clipsToBounds = true
+        view.translatesAutoresizingMaskIntoConstraints = false
+        return view
+    }()
+
+    private lazy var imageContainerView: UIView = {
+        let view = UIView()
         view.clipsToBounds = true
         view.translatesAutoresizingMaskIntoConstraints = false
         return view
@@ -177,8 +197,25 @@ final class PopularTripCell: UITableViewCell {
         return label
     }()
 
+    private lazy var textStackView: UIStackView = {
+        let stack = UIStackView(arrangedSubviews: [descriptionRowStackView, priceLabel])
+        stack.axis = .vertical
+        stack.spacing = WraithSpacing.space12
+        stack.translatesAutoresizingMaskIntoConstraints = false
+        return stack
+    }()
+
+    /// Plain wrapper (not a stack view) so `textStackView` can be inset from the sides with
+    /// its own constraints without fighting the arranged-subview width constraints
+    /// `contentStackView` would otherwise impose on it directly.
+    private lazy var textContainerView: UIView = {
+        let view = UIView()
+        view.translatesAutoresizingMaskIntoConstraints = false
+        return view
+    }()
+
     private lazy var contentStackView: UIStackView = {
-        let stack = UIStackView(arrangedSubviews: [imageContainerView, descriptionRowStackView, priceLabel])
+        let stack = UIStackView(arrangedSubviews: [imageContainerView, textContainerView])
         stack.axis = .vertical
         stack.spacing = WraithSpacing.space12
         stack.translatesAutoresizingMaskIntoConstraints = false
@@ -215,19 +252,37 @@ final class PopularTripCell: UITableViewCell {
         backgroundColor = .clear
         contentView.backgroundColor = .clear
 
-        contentView.addSubview(contentStackView)
+        contentView.addSubview(cardShadowContainerView)
+        cardShadowContainerView.addSubview(cardContainerView)
+        cardContainerView.addSubview(contentStackView)
+        textContainerView.addSubview(textStackView)
         imageContainerView.addSubview(photoImageView)
         imageContainerView.addSubview(gradientOverlayView)
         imageContainerView.addSubview(favoriteButton)
         imageContainerView.addSubview(overlayTextStackView)
 
         NSLayoutConstraint.activate([
-            // The image (and the card built around it) is 90% of the screen's width,
-            // centered, rather than running edge-to-edge like a default table row.
-            contentStackView.topAnchor.constraint(equalTo: contentView.topAnchor, constant: WraithSpacing.space12),
-            contentStackView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -WraithSpacing.space12),
-            contentStackView.centerXAnchor.constraint(equalTo: contentView.centerXAnchor),
-            contentStackView.widthAnchor.constraint(equalTo: contentView.widthAnchor, multiplier: 0.9),
+            // The card is 90% of the screen's width, centered, rather than running
+            // edge-to-edge like a default table row.
+            cardShadowContainerView.topAnchor.constraint(equalTo: contentView.topAnchor, constant: WraithSpacing.space12),
+            cardShadowContainerView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -WraithSpacing.space12),
+            cardShadowContainerView.centerXAnchor.constraint(equalTo: contentView.centerXAnchor),
+            cardShadowContainerView.widthAnchor.constraint(equalTo: contentView.widthAnchor, multiplier: 0.9),
+
+            cardContainerView.topAnchor.constraint(equalTo: cardShadowContainerView.topAnchor),
+            cardContainerView.leadingAnchor.constraint(equalTo: cardShadowContainerView.leadingAnchor),
+            cardContainerView.trailingAnchor.constraint(equalTo: cardShadowContainerView.trailingAnchor),
+            cardContainerView.bottomAnchor.constraint(equalTo: cardShadowContainerView.bottomAnchor),
+
+            contentStackView.topAnchor.constraint(equalTo: cardContainerView.topAnchor),
+            contentStackView.leadingAnchor.constraint(equalTo: cardContainerView.leadingAnchor),
+            contentStackView.trailingAnchor.constraint(equalTo: cardContainerView.trailingAnchor),
+            contentStackView.bottomAnchor.constraint(equalTo: cardContainerView.bottomAnchor, constant: -WraithSpacing.space16),
+
+            textStackView.topAnchor.constraint(equalTo: textContainerView.topAnchor),
+            textStackView.bottomAnchor.constraint(equalTo: textContainerView.bottomAnchor),
+            textStackView.leadingAnchor.constraint(equalTo: textContainerView.leadingAnchor, constant: WraithSpacing.space16),
+            textStackView.trailingAnchor.constraint(equalTo: textContainerView.trailingAnchor, constant: -WraithSpacing.space16),
 
             imageContainerView.heightAnchor.constraint(equalToConstant: WraithSpacing.space220),
 
@@ -262,6 +317,32 @@ final class PopularTripCell: UITableViewCell {
     }
 
     // MARK: - Lifecycle
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        // An explicit shadow path lets Core Animation skip re-rasterizing the shadow's alpha
+        // mask on every frame — without it, the press-down animation below would be janky.
+        cardShadowContainerView.layer.shadowPath = UIBezierPath(
+            roundedRect: cardShadowContainerView.bounds,
+            cornerRadius: cardContainerView.layer.cornerRadius
+        ).cgPath
+    }
+
+    override func setHighlighted(_ highlighted: Bool, animated: Bool) {
+        super.setHighlighted(highlighted, animated: animated)
+        // `selectionStyle = .none` leaves taps with zero visual feedback by default — a
+        // subtle press-down on the card itself keeps every row feeling responsive.
+        let transform: CGAffineTransform = highlighted ? CGAffineTransform(scaleX: 0.97, y: 0.97) : .identity
+        UIView.animate(
+            withDuration: 0.2,
+            delay: 0,
+            usingSpringWithDamping: 0.7,
+            initialSpringVelocity: 0.4,
+            options: [.allowUserInteraction, .beginFromCurrentState]
+        ) {
+            self.cardShadowContainerView.transform = transform
+        }
+    }
 
     override func prepareForReuse() {
         super.prepareForReuse()

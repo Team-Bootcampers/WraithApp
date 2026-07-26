@@ -52,8 +52,13 @@ extension UIImageView {
         Task { [weak self] in
             guard let loadedImage = try? await ImageLoader.shared.loadImage(from: url) else { return }
             await MainActor.run {
-                guard self?.currentImageURL == url else { return }
-                self?.image = loadedImage
+                guard let self, self.currentImageURL == url else { return }
+                // A network image landing on top of the placeholder fill with no transition
+                // reads as a glitch — this crossfade makes every photo in the app (cards,
+                // carousels, hero images) settle in smoothly instead of popping in.
+                UIView.transition(with: self, duration: 0.25, options: [.transitionCrossDissolve, .allowUserInteraction]) {
+                    self.image = loadedImage
+                }
             }
         }
     }

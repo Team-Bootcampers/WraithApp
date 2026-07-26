@@ -35,14 +35,18 @@ extension UIColor {
 
     static let wraithPrimary = UIColor(light: "#E63946", dark: "#FF5A67")
     static let wraithSecondary = UIColor(light: "#FFC145", dark: "#FFCF6B")
-    static let wraithBackground = UIColor(light: "#FFFFFF", dark: "#17130F")
+    /// Grouped-list style background: clearly darker than `wraithSurface` so cards read as
+    /// elevated content sitting on the screen instead of blending into a flat white page.
+    static let wraithBackground = UIColor(light: "#EEECE5", dark: "#17130F")
     static let wraithOnSurface = UIColor(light: "#2B2118", dark: "#F5EDE4")
     static let wraithOnSurfaceVariant = UIColor(light: "#7A6F63", dark: "#B8AA9C")
-    static let wraithOutlineVariant = UIColor(light: "#F0E4C8", dark: "#3A322A")
+    static let wraithOutlineVariant = UIColor(light: "#E7E2DA", dark: "#4A4038")
     static let wraithSurfaceContainerLowest = UIColor(light: "#FFFFFF", dark: "#0F0C09")
     static let wraithOutline = UIColor(light: "#A69C8E", dark: "#6B5F53")
     static let wraithSurface = UIColor(light: "#FFFFFF", dark: "#241E18")
-    static let wraithSurfaceVariant = UIColor(light: "#FFF3D6", dark: "#3D3120")
+    /// Neutral warm-gray fill for placeholders/unselected chips — kept off the brand yellow
+    /// so it reads as a true "inactive" state rather than a highlighted one.
+    static let wraithSurfaceVariant = UIColor(light: "#F0EDE7", dark: "#2E2A24")
     static let wraithOnPrimary = UIColor.white
 
     static let wraithPrimaryDeep = UIColor(light: "#C6303C", dark: "#E64550")
@@ -51,6 +55,11 @@ extension UIColor {
     /// from `wraithPrimary` even though both are red-toned, so a destructive affordance never
     /// reads as "selected/active" (which already uses `wraithPrimary`).
     static let wraithError = UIColor(light: "#DC2626", dark: "#F87171")
+
+    /// "This item is picked" affordance (selectable POI cards, checkmarks) — Apple's own
+    /// system blue rather than the red brand accent, so a selection never reads as
+    /// destructive/error and stays instantly recognizable the way iOS's own selection UI is.
+    static let wraithSelection = UIColor.systemBlue
 
     // MARK: - Photo Scrims
 
@@ -62,5 +71,5 @@ extension UIColor {
 
     /// Card drop-shadow color — same reasoning as the scrims above, a shadow needs to stay a
     /// fixed dark tone regardless of theme rather than following `wraithOnSurface`.
-    static let wraithCardShadow = UIColor.black.withAlphaComponent(0.08)
+    static let wraithCardShadow = UIColor.black.withAlphaComponent(0.14)
 }

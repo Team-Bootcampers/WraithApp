@@ -19,6 +19,21 @@ final class ProfileViewController: UIViewController {
     private var easterEggTapCount = 0
     private var isShowingEasterEgg = false
 
+    // MARK: - Scroll Container
+
+    private let scrollView: UIScrollView = {
+        let scrollView = UIScrollView()
+        scrollView.translatesAutoresizingMaskIntoConstraints = false
+        scrollView.showsVerticalScrollIndicator = false
+        return scrollView
+    }()
+
+    private let contentView: UIView = {
+        let view = UIView()
+        view.translatesAutoresizingMaskIntoConstraints = false
+        return view
+    }()
+
     // MARK: - Header
 
     private let avatarContainerView: UIView = {
@@ -188,9 +203,24 @@ final class ProfileViewController: UIViewController {
         legalStack.axis = .vertical
         legalStack.spacing = WraithSpacing.space12
 
-        [headerStack, authActionButton, featuresSectionLabel, featuresStackView, themeRowView, legalStack, retakeOnboardingButton, versionLabel, countdownLabel].forEach { view.addSubview($0) }
+        view.addSubview(scrollView)
+        scrollView.addSubview(contentView)
+        view.addSubview(countdownLabel)
+
+        [headerStack, authActionButton, featuresSectionLabel, featuresStackView, themeRowView, legalStack, retakeOnboardingButton, versionLabel].forEach { contentView.addSubview($0) }
 
         NSLayoutConstraint.activate([
+            scrollView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
+            scrollView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            scrollView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            scrollView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+
+            contentView.topAnchor.constraint(equalTo: scrollView.contentLayoutGuide.topAnchor),
+            contentView.leadingAnchor.constraint(equalTo: scrollView.contentLayoutGuide.leadingAnchor),
+            contentView.trailingAnchor.constraint(equalTo: scrollView.contentLayoutGuide.trailingAnchor),
+            contentView.bottomAnchor.constraint(equalTo: scrollView.contentLayoutGuide.bottomAnchor),
+            contentView.widthAnchor.constraint(equalTo: scrollView.frameLayoutGuide.widthAnchor),
+
             avatarContainerView.widthAnchor.constraint(equalToConstant: 56),
             avatarContainerView.heightAnchor.constraint(equalToConstant: 56),
 
@@ -199,25 +229,25 @@ final class ProfileViewController: UIViewController {
             avatarImageView.widthAnchor.constraint(equalToConstant: 26),
             avatarImageView.heightAnchor.constraint(equalToConstant: 26),
 
-            headerStack.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: WraithSpacing.space24),
-            headerStack.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: WraithSpacing.space24),
-            headerStack.trailingAnchor.constraint(lessThanOrEqualTo: view.trailingAnchor, constant: -WraithSpacing.space24),
+            headerStack.topAnchor.constraint(equalTo: contentView.topAnchor, constant: WraithSpacing.space24),
+            headerStack.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: WraithSpacing.space24),
+            headerStack.trailingAnchor.constraint(lessThanOrEqualTo: contentView.trailingAnchor, constant: -WraithSpacing.space24),
 
             authActionButton.topAnchor.constraint(equalTo: headerStack.bottomAnchor, constant: WraithSpacing.space32),
-            authActionButton.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: WraithSpacing.space24),
-            authActionButton.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -WraithSpacing.space24),
+            authActionButton.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: WraithSpacing.space24),
+            authActionButton.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -WraithSpacing.space24),
 
             featuresSectionLabel.topAnchor.constraint(equalTo: authActionButton.bottomAnchor, constant: WraithSpacing.space32),
-            featuresSectionLabel.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: WraithSpacing.space24),
-            featuresSectionLabel.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -WraithSpacing.space24),
+            featuresSectionLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: WraithSpacing.space24),
+            featuresSectionLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -WraithSpacing.space24),
 
             featuresStackView.topAnchor.constraint(equalTo: featuresSectionLabel.bottomAnchor, constant: WraithSpacing.space12),
-            featuresStackView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: WraithSpacing.space24),
-            featuresStackView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -WraithSpacing.space24),
+            featuresStackView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: WraithSpacing.space24),
+            featuresStackView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -WraithSpacing.space24),
 
             themeRowView.topAnchor.constraint(equalTo: featuresStackView.bottomAnchor, constant: WraithSpacing.space32),
-            themeRowView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: WraithSpacing.space24),
-            themeRowView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -WraithSpacing.space24),
+            themeRowView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: WraithSpacing.space24),
+            themeRowView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -WraithSpacing.space24),
 
             themeRowTitleLabel.leadingAnchor.constraint(equalTo: themeRowView.leadingAnchor, constant: WraithSpacing.space16),
             themeRowTitleLabel.topAnchor.constraint(equalTo: themeRowView.topAnchor, constant: WraithSpacing.space16),
@@ -228,16 +258,18 @@ final class ProfileViewController: UIViewController {
             themeSwitch.trailingAnchor.constraint(equalTo: themeRowView.trailingAnchor, constant: -WraithSpacing.space16),
 
             legalStack.topAnchor.constraint(equalTo: themeRowView.bottomAnchor, constant: WraithSpacing.space24),
-            legalStack.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: WraithSpacing.space24),
-            legalStack.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -WraithSpacing.space24),
+            legalStack.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: WraithSpacing.space24),
+            legalStack.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -WraithSpacing.space24),
 
             retakeOnboardingButton.topAnchor.constraint(equalTo: legalStack.bottomAnchor, constant: WraithSpacing.space40),
-            retakeOnboardingButton.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            retakeOnboardingButton.centerXAnchor.constraint(equalTo: contentView.centerXAnchor),
+            retakeOnboardingButton.leadingAnchor.constraint(greaterThanOrEqualTo: contentView.leadingAnchor, constant: WraithSpacing.space24),
+            retakeOnboardingButton.trailingAnchor.constraint(lessThanOrEqualTo: contentView.trailingAnchor, constant: -WraithSpacing.space24),
 
-            versionLabel.topAnchor.constraint(greaterThanOrEqualTo: retakeOnboardingButton.bottomAnchor, constant: WraithSpacing.space24),
-            versionLabel.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: WraithSpacing.space24),
-            versionLabel.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -WraithSpacing.space24),
-            versionLabel.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -WraithSpacing.space24),
+            versionLabel.topAnchor.constraint(equalTo: retakeOnboardingButton.bottomAnchor, constant: WraithSpacing.space24),
+            versionLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: WraithSpacing.space24),
+            versionLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -WraithSpacing.space24),
+            versionLabel.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -WraithSpacing.space32),
 
             countdownLabel.centerXAnchor.constraint(equalTo: view.centerXAnchor),
             countdownLabel.centerYAnchor.constraint(equalTo: view.centerYAnchor)

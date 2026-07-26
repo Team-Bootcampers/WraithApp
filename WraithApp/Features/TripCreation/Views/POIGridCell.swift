@@ -29,6 +29,8 @@ final class POIGridCell: UICollectionViewCell {
     // MARK: - Setup
 
     private func setupLayout() {
+        backgroundColor = .clear
+        contentView.backgroundColor = .clear
         cardView.translatesAutoresizingMaskIntoConstraints = false
         contentView.addSubview(cardView)
         NSLayoutConstraint.activate([

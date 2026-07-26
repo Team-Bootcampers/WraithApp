@@ -7,7 +7,7 @@
 
 import UIKit
 
-final class POIMiniCardView: UIView {
+final class POIMiniCardView: UIView, UIGestureRecognizerDelegate {
 
     // MARK: - UI Components
 
@@ -17,7 +17,6 @@ final class POIMiniCardView: UIView {
         let view = UIView()
         view.layer.cornerRadius = WraithRadius.radius16
         view.clipsToBounds = true
-        view.layer.borderColor = TripAccentTheme.accent.cgColor
         view.translatesAutoresizingMaskIntoConstraints = false
         return view
     }()
@@ -31,22 +30,34 @@ final class POIMiniCardView: UIView {
         return imageView
     }()
 
+    /// A plain white halo sitting behind the checkmark glyph — matches the standard iOS
+    /// photo-picker selection treatment (a light backing so the mark stays legible against
+    /// any photo) instead of a flat colored square badge.
+    private lazy var selectionBadgeHaloView: UIView = {
+        let view = UIView()
+        view.backgroundColor = .white
+        view.layer.cornerRadius = 14
+        view.layer.shadowColor = UIColor.black.withAlphaComponent(0.25).cgColor
+        view.layer.shadowOpacity = 1
+        view.layer.shadowRadius = 3
+        view.layer.shadowOffset = CGSize(width: 0, height: 1)
+        view.isHidden = true
+        view.alpha = 0
+        view.translatesAutoresizingMaskIntoConstraints = false
+        return view
+    }()
+
     private lazy var selectionBadgeImageView: UIImageView = {
-        let imageView = UIImageView(image: UIImage(systemName: "checkmark"))
-        imageView.tintColor = .wraithOnPrimary
-        imageView.backgroundColor = TripAccentTheme.accent
-        imageView.layer.cornerRadius = WraithRadius.radius11
-        imageView.clipsToBounds = true
-        imageView.contentMode = .center
-        imageView.isHidden = true
-        imageView.alpha = 0
+        let imageView = UIImageView(image: UIImage(systemName: "checkmark.circle.fill"))
+        imageView.tintColor = .wraithSelection
+        imageView.contentMode = .scaleAspectFit
         imageView.translatesAutoresizingMaskIntoConstraints = false
         return imageView
     }()
 
     private lazy var nameLabel: UILabel = {
         let label = UILabel()
-        label.font = .systemFont(ofSize: 14, weight: .semibold)
+        label.font = .systemFont(ofSize: 15, weight: .semibold)
         label.textColor = .wraithOnSurface
         label.numberOfLines = 1
         label.translatesAutoresizingMaskIntoConstraints = false
@@ -80,18 +91,41 @@ final class POIMiniCardView: UIView {
 
     private lazy var priceLabel: UILabel = {
         let label = UILabel()
-        label.font = .systemFont(ofSize: 13, weight: .semibold)
-        label.textColor = .wraithOnSurface
+        label.font = .systemFont(ofSize: 14, weight: .bold)
+        label.textColor = TripAccentTheme.accent
         label.translatesAutoresizingMaskIntoConstraints = false
         return label
     }()
 
+    /// Hidden by default — only a caller that opts in (currently: the hotel recap in Trip
+    /// Summary) shows this, via `setActionButton(title:)`. Every other place this card is
+    /// used (Trip Creation's selection carousels, the grid, other recap rows) leaves it out.
+    private lazy var actionButton: UIButton = {
+        var configuration = UIButton.Configuration.filled()
+        configuration.baseBackgroundColor = TripAccentTheme.accent
+        configuration.baseForegroundColor = .wraithOnPrimary
+        configuration.cornerStyle = .capsule
+        configuration.contentInsets = NSDirectionalEdgeInsets(top: WraithSpacing.space8, leading: WraithSpacing.space12, bottom: WraithSpacing.space8, trailing: WraithSpacing.space12)
+        configuration.titleTextAttributesTransformer = UIConfigurationTextAttributesTransformer { incoming in
+            var outgoing = incoming
+            outgoing.font = .systemFont(ofSize: 12, weight: .semibold)
+            return outgoing
+        }
+        let button = UIButton(configuration: configuration)
+        button.translatesAutoresizingMaskIntoConstraints = false
+        button.isHidden = true
+        button.addTarget(self, action: #selector(handleActionButtonTap), for: .touchUpInside)
+        button.applyStandardPressAnimation()
+        return button
+    }()
+
     private lazy var textStackView: UIStackView = {
-        let stack = UIStackView(arrangedSubviews: [nameLabel, ratingStackView, priceLabel])
+        let stack = UIStackView(arrangedSubviews: [nameLabel, ratingStackView, priceLabel, actionButton])
         stack.axis = .vertical
-        stack.spacing = WraithSpacing.space4
+        stack.spacing = WraithSpacing.space6
         stack.alignment = .fill
         stack.translatesAutoresizingMaskIntoConstraints = false
+        stack.setCustomSpacing(WraithSpacing.space8, after: priceLabel)
         return stack
     }()
 
@@ -107,7 +141,7 @@ final class POIMiniCardView: UIView {
     private lazy var mainStackView: UIStackView = {
         let stack = UIStackView(arrangedSubviews: [photoImageView, textContainerView])
         stack.axis = .vertical
-        stack.spacing = WraithSpacing.space8
+        stack.spacing = WraithSpacing.space6
         stack.translatesAutoresizingMaskIntoConstraints = false
         return stack
     }()
@@ -115,7 +149,9 @@ final class POIMiniCardView: UIView {
     // MARK: - Properties
 
     var onTap: (() -> Void)?
+    var onActionTap: (() -> Void)?
     private var isCurrentlySelected = false
+    private let photoHeight: CGFloat
     private var baseBackgroundColor: UIColor = .wraithSurface {
         didSet {
             guard !isCurrentlySelected else { return }
@@ -125,12 +161,18 @@ final class POIMiniCardView: UIView {
 
     // MARK: - Init
 
-    override init(frame: CGRect) {
-        super.init(frame: frame)
+    /// - Parameter photoHeight: lets a consumer scale the thumbnail up for a "showcase" style
+    ///   carousel (e.g. hotel/place/restaurant selection) vs. the compact default used in
+    ///   grids and recap rows.
+    init(photoHeight: CGFloat = WraithSpacing.space140) {
+        self.photoHeight = photoHeight
+        super.init(frame: .zero)
         setupAppearance()
         setupLayout()
         isUserInteractionEnabled = true
-        addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(handleTap)))
+        let tapGestureRecognizer = UITapGestureRecognizer(target: self, action: #selector(handleTap))
+        tapGestureRecognizer.delegate = self
+        addGestureRecognizer(tapGestureRecognizer)
     }
 
     required init?(coder: NSCoder) {
@@ -141,15 +183,29 @@ final class POIMiniCardView: UIView {
 
     private func setupAppearance() {
         backgroundColor = .clear
-        applyCardShadow()
+        // A much lighter, tighter shadow than the shared `applyCardShadow()` default — these
+        // cards sit packed close together (12-18pt gaps), so both the shared blur radius and
+        // its opacity spilled past each card's edge far enough to overlap its neighbor's,
+        // making the gaps between cards read as a continuous gray wash instead of individual
+        // cards with their own subtle lift.
+        layer.shadowColor = UIColor.black.withAlphaComponent(0.06).cgColor
+        layer.shadowOpacity = 1
+        layer.shadowRadius = 3
+        layer.shadowOffset = CGSize(width: 0, height: 1)
+        layer.masksToBounds = false
         containerView.backgroundColor = baseBackgroundColor
+        // A permanent hairline border keeps the card legible against the page background on
+        // its own, instead of depending entirely on the shadow for definition.
+        containerView.layer.borderWidth = WraithBorderWidth.hairline
+        containerView.layer.borderColor = UIColor.wraithOutlineVariant.cgColor
     }
 
     private func setupLayout() {
         addSubview(containerView)
         containerView.addSubview(mainStackView)
         textContainerView.addSubview(textStackView)
-        photoImageView.addSubview(selectionBadgeImageView)
+        photoImageView.addSubview(selectionBadgeHaloView)
+        selectionBadgeHaloView.addSubview(selectionBadgeImageView)
         NSLayoutConstraint.activate([
             containerView.topAnchor.constraint(equalTo: topAnchor),
             containerView.leadingAnchor.constraint(equalTo: leadingAnchor),
@@ -161,9 +217,9 @@ final class POIMiniCardView: UIView {
             mainStackView.topAnchor.constraint(equalTo: containerView.topAnchor),
             mainStackView.leadingAnchor.constraint(equalTo: containerView.leadingAnchor),
             mainStackView.trailingAnchor.constraint(equalTo: containerView.trailingAnchor),
-            mainStackView.bottomAnchor.constraint(equalTo: containerView.bottomAnchor, constant: -WraithSpacing.space10),
+            mainStackView.bottomAnchor.constraint(equalTo: containerView.bottomAnchor, constant: -WraithSpacing.space8),
 
-            photoImageView.heightAnchor.constraint(equalToConstant: WraithSpacing.space140),
+            photoImageView.heightAnchor.constraint(equalToConstant: photoHeight),
 
             textStackView.topAnchor.constraint(equalTo: textContainerView.topAnchor),
             textStackView.bottomAnchor.constraint(equalTo: textContainerView.bottomAnchor),
@@ -173,10 +229,15 @@ final class POIMiniCardView: UIView {
             ratingIconImageView.widthAnchor.constraint(equalToConstant: 12),
             ratingIconImageView.heightAnchor.constraint(equalToConstant: 12),
 
-            selectionBadgeImageView.topAnchor.constraint(equalTo: photoImageView.topAnchor, constant: WraithSpacing.space8),
-            selectionBadgeImageView.trailingAnchor.constraint(equalTo: photoImageView.trailingAnchor, constant: -WraithSpacing.space8),
-            selectionBadgeImageView.widthAnchor.constraint(equalToConstant: 22),
-            selectionBadgeImageView.heightAnchor.constraint(equalToConstant: 22)
+            selectionBadgeHaloView.topAnchor.constraint(equalTo: photoImageView.topAnchor, constant: WraithSpacing.space8),
+            selectionBadgeHaloView.trailingAnchor.constraint(equalTo: photoImageView.trailingAnchor, constant: -WraithSpacing.space8),
+            selectionBadgeHaloView.widthAnchor.constraint(equalToConstant: 28),
+            selectionBadgeHaloView.heightAnchor.constraint(equalToConstant: 28),
+
+            selectionBadgeImageView.centerXAnchor.constraint(equalTo: selectionBadgeHaloView.centerXAnchor),
+            selectionBadgeImageView.centerYAnchor.constraint(equalTo: selectionBadgeHaloView.centerYAnchor),
+            selectionBadgeImageView.widthAnchor.constraint(equalToConstant: 24),
+            selectionBadgeImageView.heightAnchor.constraint(equalToConstant: 24)
         ])
     }
 
@@ -187,12 +248,30 @@ final class POIMiniCardView: UIView {
         layer.shadowPath = UIBezierPath(roundedRect: bounds, cornerRadius: containerView.layer.cornerRadius).cgPath
     }
 
+    override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
+        super.traitCollectionDidChange(previousTraitCollection)
+        guard !isCurrentlySelected else { return }
+        containerView.layer.borderColor = UIColor.wraithOutlineVariant.cgColor
+    }
+
     // MARK: - Public
 
     /// Lets a consumer match this card's fill to whichever background tier it's actually
     /// sitting on (a card nested in another card vs. a card sitting directly on the page).
     func setCardBackground(_ color: UIColor) {
         baseBackgroundColor = color
+    }
+
+    /// Shows (or hides, if `title` is `nil`) a small CTA below the price — opt-in per
+    /// consumer since most places this card appears (selection carousels, the grid) don't
+    /// want one.
+    func setActionButton(title: String?) {
+        guard let title else {
+            actionButton.isHidden = true
+            return
+        }
+        actionButton.configuration?.title = title
+        actionButton.isHidden = false
     }
 
     func configure(with item: POIDisplayItem) {
@@ -211,11 +290,12 @@ final class POIMiniCardView: UIView {
 
     private func setSelected(_ selected: Bool, animated: Bool) {
         guard animated else {
-            selectionBadgeImageView.isHidden = !selected
-            selectionBadgeImageView.alpha = selected ? 1 : 0
-            selectionBadgeImageView.transform = .identity
-            containerView.layer.borderWidth = selected ? WraithBorderWidth.selected : 0
-            containerView.backgroundColor = selected ? TripAccentTheme.accentSoftBackground : baseBackgroundColor
+            selectionBadgeHaloView.isHidden = !selected
+            selectionBadgeHaloView.alpha = selected ? 1 : 0
+            selectionBadgeHaloView.transform = .identity
+            containerView.layer.borderWidth = selected ? WraithBorderWidth.selected : WraithBorderWidth.hairline
+            containerView.layer.borderColor = (selected ? UIColor.wraithSelection : .wraithOutlineVariant).cgColor
+            containerView.backgroundColor = selected ? TripAccentTheme.selectionSoftBackground : baseBackgroundColor
             return
         }
 
@@ -224,7 +304,18 @@ final class POIMiniCardView: UIView {
         // no newer tap has since flipped the state back — tapping the same card rapidly
         // used to leave two overlapping animations racing, which is why the checkmark
         // would sometimes vanish even though the card was still selected.
-        selectionBadgeImageView.isHidden = false
+        selectionBadgeHaloView.isHidden = false
+
+        // A quick squash-and-settle on the whole card, on top of the border/badge
+        // transition below, makes toggling a selection feel like a deliberate action
+        // instead of a static color swap.
+        UIView.animate(withDuration: 0.12, delay: 0, options: [.allowUserInteraction, .curveEaseOut]) {
+            self.containerView.transform = CGAffineTransform(scaleX: 0.96, y: 0.96)
+        } completion: { _ in
+            UIView.animate(withDuration: 0.3, delay: 0, usingSpringWithDamping: 0.55, initialSpringVelocity: 0.5, options: [.allowUserInteraction]) {
+                self.containerView.transform = .identity
+            }
+        }
 
         UIView.animate(
             withDuration: 0.35,
@@ -233,12 +324,13 @@ final class POIMiniCardView: UIView {
             initialSpringVelocity: 0.4,
             options: [.allowUserInteraction, .beginFromCurrentState]
         ) {
-            self.containerView.layer.borderWidth = selected ? 2 : 0
-            self.containerView.backgroundColor = selected ? TripAccentTheme.accentSoftBackground : self.baseBackgroundColor
-            self.selectionBadgeImageView.alpha = selected ? 1 : 0
-            self.selectionBadgeImageView.transform = selected ? .identity : CGAffineTransform(scaleX: 0.4, y: 0.4)
+            self.containerView.layer.borderWidth = selected ? WraithBorderWidth.selected : WraithBorderWidth.hairline
+            self.containerView.layer.borderColor = (selected ? UIColor.wraithSelection : .wraithOutlineVariant).cgColor
+            self.containerView.backgroundColor = selected ? TripAccentTheme.selectionSoftBackground : self.baseBackgroundColor
+            self.selectionBadgeHaloView.alpha = selected ? 1 : 0
+            self.selectionBadgeHaloView.transform = selected ? .identity : CGAffineTransform(scaleX: 0.4, y: 0.4)
         } completion: { _ in
-            self.selectionBadgeImageView.isHidden = !self.isCurrentlySelected
+            self.selectionBadgeHaloView.isHidden = !self.isCurrentlySelected
         }
     }
 
@@ -246,5 +338,18 @@ final class POIMiniCardView: UIView {
 
     @objc private func handleTap() {
         onTap?()
+    }
+
+    @objc private func handleActionButtonTap() {
+        onActionTap?()
+    }
+
+    // MARK: - UIGestureRecognizerDelegate
+
+    /// Without this, tapping `actionButton` also fired the card's own tap gesture (toggling
+    /// selection) underneath it — the button's own `touchUpInside` doesn't stop a sibling
+    /// gesture recognizer from seeing the same touch.
+    func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldReceive touch: UITouch) -> Bool {
+        !actionButton.isHidden && touch.view?.isDescendant(of: actionButton) == true ? false : true
     }
 }

@@ -11,6 +11,7 @@ import CoreGraphics
 /// the app's views should come from here instead of being written inline.
 enum WraithSpacing {
     static let space4: CGFloat = 4
+    static let space6: CGFloat = 6
     static let space8: CGFloat = 8
     static let space10: CGFloat = 10
     static let space12: CGFloat = 12
@@ -25,7 +26,10 @@ enum WraithSpacing {
     static let space60: CGFloat = 60
     static let space80: CGFloat = 80
     static let space140: CGFloat = 140
+    static let space200: CGFloat = 200
     static let space220: CGFloat = 220
+    static let space280: CGFloat = 280
+    static let space320: CGFloat = 320
 }
 
 /// Shared corner radius scale.

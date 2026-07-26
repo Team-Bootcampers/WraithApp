@@ -394,10 +394,12 @@ extension SelectionListViewController: UITableViewDataSource, UITableViewDelegat
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         tableView.deselectRow(at: indexPath, animated: true)
         let item = filteredItems[indexPath.row]
-        let onSelect = onSelect
-        dismiss(animated: true) {
-            onSelect?(item)
-        }
+        // Fire the selection immediately instead of waiting for the dismiss completion —
+        // the underlying row update has nothing to do with this sheet's own dismiss
+        // animation, so gating it on that just made the new value appear to lag behind by
+        // however long the animation took.
+        onSelect?(item)
+        dismiss(animated: true)
     }
 }
 
