@@ -28,26 +28,10 @@ final class TripSummaryViewController: UIViewController {
 
     private lazy var heroView = TripSummaryHeroView(stopCount: viewModel.stops.count)
 
-    private lazy var totalCostView = TripSummaryTotalCostView(totalCost: viewModel.totalCost)
-
-    private lazy var purchaseButton: UIButton = {
-        var configuration = UIButton.Configuration.filled()
-        configuration.title = "Biletleri Satın Al"
-        configuration.image = UIImage(systemName: "creditcard.fill")
-        configuration.imagePadding = 8
-        configuration.baseBackgroundColor = TripAccentTheme.accent
-        configuration.baseForegroundColor = .wraithOnPrimary
-        configuration.cornerStyle = .large
-        configuration.titleTextAttributesTransformer = UIConfigurationTextAttributesTransformer { incoming in
-            var outgoing = incoming
-            outgoing.font = .systemFont(ofSize: 17, weight: .semibold)
-            return outgoing
-        }
-        let button = UIButton(configuration: configuration)
-        button.translatesAutoresizingMaskIntoConstraints = false
-        button.heightAnchor.constraint(equalToConstant: 52).isActive = true
-        button.addTarget(self, action: #selector(didTapPurchase), for: .touchUpInside)
-        return button
+    private lazy var totalCostView: TripSummaryTotalCostView = {
+        let view = TripSummaryTotalCostView(totalCost: viewModel.totalCost)
+        view.onPurchaseTap = { [weak self] in self?.didTapPurchase() }
+        return view
     }()
 
     private lazy var planPDFButton: UIButton = {
@@ -67,6 +51,26 @@ final class TripSummaryViewController: UIViewController {
         button.translatesAutoresizingMaskIntoConstraints = false
         button.heightAnchor.constraint(equalToConstant: 52).isActive = true
         button.addTarget(self, action: #selector(didTapViewPlan), for: .touchUpInside)
+        return button
+    }()
+
+    private lazy var generatePlanButton: UIButton = {
+        var configuration = UIButton.Configuration.filled()
+        configuration.title = "Detaylı Gezi Planı Oluştur"
+        configuration.image = UIImage(systemName: "sparkles")
+        configuration.imagePadding = 8
+        configuration.baseBackgroundColor = .wraithSecondary
+        configuration.baseForegroundColor = .wraithOnSecondary
+        configuration.cornerStyle = .large
+        configuration.titleTextAttributesTransformer = UIConfigurationTextAttributesTransformer { incoming in
+            var outgoing = incoming
+            outgoing.font = .systemFont(ofSize: 17, weight: .semibold)
+            return outgoing
+        }
+        let button = UIButton(configuration: configuration)
+        button.translatesAutoresizingMaskIntoConstraints = false
+        button.heightAnchor.constraint(equalToConstant: 52).isActive = true
+        button.addTarget(self, action: #selector(didTapGeneratePlan), for: .touchUpInside)
         return button
     }()
 
@@ -90,12 +94,56 @@ final class TripSummaryViewController: UIViewController {
         return button
     }()
 
-    private lazy var publicButton: UIButton = {
-        let button = UIButton(configuration: publicButtonConfiguration(isPublic: viewModel.isPublic))
+    private lazy var publicIconButton: UIButton = {
+        let button = UIButton(type: .system)
+        button.tintColor = TripAccentTheme.accent
         button.translatesAutoresizingMaskIntoConstraints = false
-        button.heightAnchor.constraint(equalToConstant: 52).isActive = true
         button.addTarget(self, action: #selector(didTapMakePublic), for: .touchUpInside)
+        button.applyStandardPressAnimation()
         return button
+    }()
+
+    private lazy var editIconButton: UIButton = {
+        let button = UIButton(type: .system)
+        button.setImage(UIImage(systemName: "square.and.pencil"), for: .normal)
+        button.tintColor = TripAccentTheme.accent
+        button.translatesAutoresizingMaskIntoConstraints = false
+        button.addTarget(self, action: #selector(didTapEditTrip), for: .touchUpInside)
+        button.applyStandardPressAnimation()
+        return button
+    }()
+
+    /// Wrapping both icons in one custom-view bar item (instead of two separate
+    /// `UIBarButtonItem`s) is what makes the gap between them controllable — the system
+    /// spacing between adjacent bar button items can't be tightened directly.
+    private lazy var navigationBarActionsStackView: UIStackView = {
+        let stack = UIStackView()
+        stack.axis = .horizontal
+        stack.spacing = WraithSpacing.space12
+        stack.alignment = .center
+        return stack
+    }()
+
+    private lazy var planGenerationLoadingView: TripPlanGenerationLoadingView = {
+        let view = TripPlanGenerationLoadingView()
+        view.translatesAutoresizingMaskIntoConstraints = false
+        return view
+    }()
+
+    private lazy var planGenerationOverlayView: UIView = {
+        let view = UIView()
+        view.backgroundColor = .wraithBackground
+        view.isHidden = true
+        view.translatesAutoresizingMaskIntoConstraints = false
+
+        view.addSubview(planGenerationLoadingView)
+        NSLayoutConstraint.activate([
+            planGenerationLoadingView.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            planGenerationLoadingView.centerYAnchor.constraint(equalTo: view.centerYAnchor),
+            planGenerationLoadingView.leadingAnchor.constraint(greaterThanOrEqualTo: view.leadingAnchor, constant: WraithSpacing.space20),
+            planGenerationLoadingView.trailingAnchor.constraint(lessThanOrEqualTo: view.trailingAnchor, constant: -WraithSpacing.space20)
+        ])
+        return view
     }()
 
     // MARK: - Properties
@@ -122,9 +170,7 @@ final class TripSummaryViewController: UIViewController {
         super.viewDidLoad()
         title = "Seyahat Özeti"
         view.backgroundColor = .wraithBackground
-        if !viewModel.stops.isEmpty {
-            navigationItem.rightBarButtonItem = UIBarButtonItem(title: "Düzenle", style: .plain, target: self, action: #selector(didTapEditTrip))
-        }
+        updateNavigationBarItems()
         setupLayout()
     }
 
@@ -132,6 +178,7 @@ final class TripSummaryViewController: UIViewController {
 
     private func setupLayout() {
         view.addSubview(scrollView)
+        view.addSubview(planGenerationOverlayView)
         scrollView.addSubview(contentStackView)
 
         contentStackView.addArrangedSubview(heroView)
@@ -140,6 +187,12 @@ final class TripSummaryViewController: UIViewController {
             let nights = viewModel.nightsCount(for: stop)
             let cost = viewModel.totalCost(for: stop)
             let stopCardView = TripStopSummaryCardView(stop: stop, nights: nights, cost: cost)
+            stopCardView.onBuyTicketTap = { [weak self] in
+                self?.showAlert(title: "Bilet Alındı", message: "Biletin başarıyla satın alındı.")
+            }
+            stopCardView.onReserveHotelTap = { [weak self] in
+                self?.showAlert(title: "Rezervasyon Yapıldı", message: "Otel rezervasyonun başarıyla tamamlandı.")
+            }
             contentStackView.addArrangedSubview(stopCardView)
         }
 
@@ -148,12 +201,8 @@ final class TripSummaryViewController: UIViewController {
         }
         if viewModel.tripPlanPDFURL != nil {
             contentStackView.addArrangedSubview(planPDFButton)
-        }
-        if viewModel.savedTrip != nil {
-            contentStackView.addArrangedSubview(publicButton)
-        }
-        if !viewModel.stops.isEmpty {
-            contentStackView.addArrangedSubview(purchaseButton)
+        } else if viewModel.savedTrip != nil {
+            contentStackView.addArrangedSubview(generatePlanButton)
         }
         if viewModel.canSaveBrowsedTrip {
             contentStackView.addArrangedSubview(saveTripButton)
@@ -169,8 +218,33 @@ final class TripSummaryViewController: UIViewController {
             contentStackView.leadingAnchor.constraint(equalTo: scrollView.contentLayoutGuide.leadingAnchor, constant: 14),
             contentStackView.trailingAnchor.constraint(equalTo: scrollView.contentLayoutGuide.trailingAnchor, constant: -14),
             contentStackView.bottomAnchor.constraint(equalTo: scrollView.contentLayoutGuide.bottomAnchor, constant: -16),
-            contentStackView.widthAnchor.constraint(equalTo: scrollView.frameLayoutGuide.widthAnchor, constant: -28)
+            contentStackView.widthAnchor.constraint(equalTo: scrollView.frameLayoutGuide.widthAnchor, constant: -28),
+
+            planGenerationOverlayView.topAnchor.constraint(equalTo: view.topAnchor),
+            planGenerationOverlayView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            planGenerationOverlayView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            planGenerationOverlayView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
         ])
+    }
+
+    /// Both actions moved from full-width buttons in the content to icon-only bar items —
+    /// same functions (`didTapEditTrip` / `didTapMakePublic`), just relocated so the primary
+    /// "Rezervasyonu Tamamla" CTA isn't competing with them for attention in the scroll body.
+    private func updateNavigationBarItems() {
+        navigationBarActionsStackView.arrangedSubviews.forEach {
+            navigationBarActionsStackView.removeArrangedSubview($0)
+            $0.removeFromSuperview()
+        }
+        if viewModel.savedTrip != nil {
+            updatePublicIconAppearance()
+            navigationBarActionsStackView.addArrangedSubview(publicIconButton)
+        }
+        if !viewModel.stops.isEmpty {
+            navigationBarActionsStackView.addArrangedSubview(editIconButton)
+        }
+        navigationItem.rightBarButtonItem = navigationBarActionsStackView.arrangedSubviews.isEmpty
+            ? nil
+            : UIBarButtonItem(customView: navigationBarActionsStackView)
     }
 
     // MARK: - Actions
@@ -190,8 +264,37 @@ final class TripSummaryViewController: UIViewController {
         navigationController?.pushViewController(PDFViewerViewController(fileURL: url), animated: true)
     }
 
+    @objc private func didTapGeneratePlan() {
+        planGenerationOverlayView.isHidden = false
+        planGenerationLoadingView.startAnimating()
+
+        Task { [weak self] in
+            guard let self else { return }
+            do {
+                try await viewModel.generateDetailedPlan()
+                totalCostView.updateAmount(viewModel.totalCost)
+                if let index = contentStackView.arrangedSubviews.firstIndex(of: generatePlanButton) {
+                    contentStackView.removeArrangedSubview(generatePlanButton)
+                    generatePlanButton.removeFromSuperview()
+                    contentStackView.insertArrangedSubview(planPDFButton, at: index)
+                }
+                // The traveler just asked for this exact plan — show it immediately instead
+                // of making them tap "Detaylı Gezi Planı" again to see what was generated.
+                if let url = viewModel.tripPlanPDFURL {
+                    navigationController?.pushViewController(PDFViewerViewController(fileURL: url), animated: true)
+                }
+            } catch {
+                let message = (error as? TripPlanningError)?.errorDescription ?? "Detaylı gezi planı oluşturulamadı, lütfen tekrar dene."
+                showAlert(title: "Bir Sorun Oluştu", message: message)
+            }
+
+            planGenerationLoadingView.stopAnimating()
+            planGenerationOverlayView.isHidden = true
+        }
+    }
+
     @objc private func didTapPurchase() {
-        showAlert(title: "Bilet Satın Alındı", message: "Seyahatiniz için biletler başarıyla satın alındı.")
+        showAlert(title: "Rezervasyon Tamamlandı", message: "Biletlerin ve konaklama rezervasyonun başarıyla tamamlandı.")
     }
 
     @objc private func didTapSaveTrip() {
@@ -235,24 +338,12 @@ final class TripSummaryViewController: UIViewController {
         coordinator.start()
     }
 
-    private func publicButtonConfiguration(isPublic: Bool) -> UIButton.Configuration {
-        var configuration = UIButton.Configuration.filled()
-        configuration.title = isPublic ? "Herkese Açık Özelliğini Kapat" : "Herkese Aç"
-        configuration.image = UIImage(systemName: isPublic ? "globe.slash.fill" : "globe")
-        configuration.imagePadding = 8
-        configuration.baseBackgroundColor = isPublic ? .wraithSurfaceVariant : .wraithSecondary
-        configuration.baseForegroundColor = isPublic ? .wraithOnSurfaceVariant : .wraithOnSecondary
-        configuration.cornerStyle = .large
-        configuration.titleTextAttributesTransformer = UIConfigurationTextAttributesTransformer { incoming in
-            var outgoing = incoming
-            outgoing.font = .systemFont(ofSize: 17, weight: .semibold)
-            return outgoing
-        }
-        return configuration
-    }
-
-    private func updatePublicButtonAppearance() {
-        publicButton.configuration = publicButtonConfiguration(isPublic: viewModel.isPublic)
+    private func updatePublicIconAppearance() {
+        let isPublic = viewModel.isPublic
+        // Same tint as `editIconButton` regardless of state — the icon shape alone (not a
+        // color change) communicates public vs. private here.
+        publicIconButton.setImage(UIImage(systemName: isPublic ? "globe.slash" : "globe"), for: .normal)
+        publicIconButton.accessibilityLabel = isPublic ? "Herkese Açık Özelliğini Kapat" : "Herkese Aç"
     }
 
     private func presentPublishForm(tripID: UUID) {
@@ -284,7 +375,7 @@ final class TripSummaryViewController: UIViewController {
             do {
                 try await publishingService.publishTrip(tripID: id, title: title, description: description)
                 viewModel.setPublic(true)
-                updatePublicButtonAppearance()
+                updatePublicIconAppearance()
                 showAlert(title: "Paylaşıldı", message: "Seyahatin herkese açık hale getirildi.")
             } catch {
                 showAlert(title: "Bir Sorun Oluştu", message: "Seyahat paylaşılamadı, lütfen tekrar dene.")
@@ -298,7 +389,7 @@ final class TripSummaryViewController: UIViewController {
             do {
                 try await publishingService.unpublishTrip(tripID: id)
                 viewModel.setPublic(false)
-                updatePublicButtonAppearance()
+                updatePublicIconAppearance()
                 showAlert(title: "Kapatıldı", message: "Seyahat artık herkese açık değil.")
             } catch {
                 showAlert(title: "Bir Sorun Oluştu", message: "İşlem tamamlanamadı, lütfen tekrar dene.")
@@ -408,6 +499,11 @@ private final class TripSummaryHeroView: UIView {
 
 private final class TripStopSummaryCardView: BaseCardView {
 
+    // MARK: - Properties
+
+    var onBuyTicketTap: (() -> Void)?
+    var onReserveHotelTap: (() -> Void)?
+
     // MARK: - Init
 
     init(stop: TripStopSnapshot, nights: Int, cost: Int) {
@@ -440,7 +536,9 @@ private final class TripStopSummaryCardView: BaseCardView {
 
         infoRows.append(SummaryInfoRow(iconSystemName: "person.2.fill", text: "\(stop.travelerCount) Kişi"))
 
-        infoRows.append(SummaryInfoRow(iconSystemName: stop.transportType.departureIconName, text: stop.transportType.title))
+        let ticketRow = TicketPurchaseRowView(transportType: stop.transportType)
+        ticketRow.onBuyTap = { [weak self] in self?.onBuyTicketTap?() }
+        infoRows.append(ticketRow)
 
         infoRows.append(SummaryInfoRow(iconSystemName: "turkishlirasign.circle.fill", text: "Bu Durağın Maliyeti: \(cost) TL", isEmphasized: true))
 
@@ -452,13 +550,23 @@ private final class TripStopSummaryCardView: BaseCardView {
 
         let selectedHotels = stop.hotels.filter { stop.selectedHotelIDs.contains($0.id) }
         if !selectedHotels.isEmpty {
-            sections.append(makePhotoRow(caption: "Konaklama", items: selectedHotels.map {
-                POIDisplayItem(id: $0.id, name: $0.name, rating: $0.rating, priceText: "\($0.pricePerNight) \($0.currency)/gece", imageURL: $0.imageURL, isSelected: false)
-            }))
+            sections.append(makePhotoRow(
+                caption: "Konaklama",
+                items: selectedHotels.map {
+                    POIDisplayItem(id: $0.id, name: $0.name, rating: $0.rating, priceText: "\($0.pricePerNight) \($0.currency)/gece", imageURL: $0.imageURL, isSelected: false)
+                },
+                cardActionTitle: "Rezervasyon Yap",
+                cardAction: { [weak self] in self?.onReserveHotelTap?() }
+            ))
         } else if let cheapestHotel = stop.hotels.min(by: { $0.pricePerNight < $1.pricePerNight }) {
-            sections.append(makePhotoRow(caption: "Önerilen Otel (en uygun fiyat)", items: [
-                POIDisplayItem(id: cheapestHotel.id, name: cheapestHotel.name, rating: cheapestHotel.rating, priceText: "\(cheapestHotel.pricePerNight) \(cheapestHotel.currency)/gece", imageURL: cheapestHotel.imageURL, isSelected: false)
-            ]))
+            sections.append(makePhotoRow(
+                caption: "Önerilen Otel (en uygun fiyat)",
+                items: [
+                    POIDisplayItem(id: cheapestHotel.id, name: cheapestHotel.name, rating: cheapestHotel.rating, priceText: "\(cheapestHotel.pricePerNight) \(cheapestHotel.currency)/gece", imageURL: cheapestHotel.imageURL, isSelected: false)
+                ],
+                cardActionTitle: "Rezervasyon Yap",
+                cardAction: { [weak self] in self?.onReserveHotelTap?() }
+            ))
         }
 
         let selectedPlaces = stop.places.filter { stop.selectedPlaceIDs.contains($0.id) }
@@ -489,7 +597,7 @@ private final class TripStopSummaryCardView: BaseCardView {
         ])
     }
 
-    private func makePhotoRow(caption: String, items: [POIDisplayItem]) -> UIView {
+    private func makePhotoRow(caption: String, items: [POIDisplayItem], cardActionTitle: String? = nil, cardAction: (() -> Void)? = nil) -> UIView {
         let captionLabel = UILabel()
         captionLabel.text = caption
         captionLabel.font = .systemFont(ofSize: 13, weight: .semibold)
@@ -500,11 +608,17 @@ private final class TripStopSummaryCardView: BaseCardView {
         scrollView.showsHorizontalScrollIndicator = false
         scrollView.translatesAutoresizingMaskIntoConstraints = false
 
+        // Bigger, showcase-style thumbnails (matching the selection carousels in Trip
+        // Creation) instead of the old small crop — the extra room goes entirely to the
+        // photo, not to the text rows below it. Each card (not the section header) carries
+        // its own action button, since that's the actual hotel/place the action applies to.
         let cardViews = items.map { item -> POIMiniCardView in
-            let view = POIMiniCardView()
+            let view = POIMiniCardView(photoHeight: WraithSpacing.space200)
             view.translatesAutoresizingMaskIntoConstraints = false
             view.setCardBackground(.wraithSurfaceVariant)
             view.configure(with: item)
+            view.setActionButton(title: cardActionTitle)
+            view.onActionTap = cardAction
             return view
         }
 
@@ -518,10 +632,14 @@ private final class TripStopSummaryCardView: BaseCardView {
         // ancestor with `scrollView` (via `cardsStackView`) — doing this inside the `map`
         // above, before the views were attached to anything, crashed with "Unable to
         // activate constraint... no common ancestor".
-        cardViews.forEach { $0.widthAnchor.constraint(equalTo: scrollView.widthAnchor, multiplier: 0.7).isActive = true }
+        cardViews.forEach { $0.widthAnchor.constraint(equalTo: scrollView.widthAnchor, multiplier: 0.72).isActive = true }
+
+        // The per-card action button (when present) needs extra room below the price so it
+        // doesn't get squeezed against the card's bottom edge.
+        let cardsHeight: CGFloat = cardActionTitle == nil ? WraithSpacing.space280 : WraithSpacing.space320
 
         NSLayoutConstraint.activate([
-            scrollView.heightAnchor.constraint(equalToConstant: 220),
+            scrollView.heightAnchor.constraint(equalToConstant: cardsHeight),
             cardsStackView.topAnchor.constraint(equalTo: scrollView.topAnchor),
             cardsStackView.leadingAnchor.constraint(equalTo: scrollView.leadingAnchor),
             cardsStackView.trailingAnchor.constraint(equalTo: scrollView.trailingAnchor),
@@ -608,25 +726,88 @@ private final class SummaryInfoRow: UIView {
     }
 }
 
-// MARK: - TripSummaryTotalCostView
+// MARK: - TicketPurchaseRowView
 
-private final class TripSummaryTotalCostView: BaseCardView {
+/// Replaces the plain transport `SummaryInfoRow` with one that also surfaces a mock starting
+/// ticket price and a direct "Bilet Al" action, right where the traveler is already looking
+/// at how they're getting there.
+private final class TicketPurchaseRowView: UIView {
 
     // MARK: - UI Components
 
-    private lazy var amountLabel: UILabel = {
+    private lazy var iconImageView: UIImageView = {
+        let imageView = UIImageView()
+        imageView.tintColor = TripAccentTheme.accent
+        imageView.contentMode = .scaleAspectFit
+        imageView.translatesAutoresizingMaskIntoConstraints = false
+        return imageView
+    }()
+
+    private lazy var titleLabel: UILabel = {
         let label = UILabel()
-        label.font = .systemFont(ofSize: 22, weight: .bold)
-        label.textColor = .wraithPrimary
+        label.font = .systemFont(ofSize: 14, weight: .regular)
+        label.textColor = .wraithOnSurface
         label.translatesAutoresizingMaskIntoConstraints = false
         return label
     }()
 
+    private lazy var priceLabel: UILabel = {
+        let label = UILabel()
+        label.font = .systemFont(ofSize: 13, weight: .semibold)
+        label.textColor = .wraithOnSurfaceVariant
+        label.translatesAutoresizingMaskIntoConstraints = false
+        return label
+    }()
+
+    private lazy var textStackView: UIStackView = {
+        let stack = UIStackView(arrangedSubviews: [titleLabel, priceLabel])
+        stack.axis = .vertical
+        stack.spacing = WraithSpacing.space4
+        stack.translatesAutoresizingMaskIntoConstraints = false
+        return stack
+    }()
+
+    private lazy var buyButton: UIButton = {
+        var configuration = UIButton.Configuration.filled()
+        configuration.title = "Bilet Al"
+        configuration.baseBackgroundColor = TripAccentTheme.accent
+        configuration.baseForegroundColor = .wraithOnPrimary
+        configuration.cornerStyle = .capsule
+        configuration.contentInsets = NSDirectionalEdgeInsets(top: WraithSpacing.space8, leading: WraithSpacing.space14, bottom: WraithSpacing.space8, trailing: WraithSpacing.space14)
+        configuration.titleTextAttributesTransformer = UIConfigurationTextAttributesTransformer { incoming in
+            var outgoing = incoming
+            outgoing.font = .systemFont(ofSize: 13, weight: .semibold)
+            return outgoing
+        }
+        let button = UIButton(configuration: configuration)
+        button.translatesAutoresizingMaskIntoConstraints = false
+        button.setContentHuggingPriority(.required, for: .horizontal)
+        button.setContentCompressionResistancePriority(.required, for: .horizontal)
+        button.addTarget(self, action: #selector(didTapBuy), for: .touchUpInside)
+        button.applyStandardPressAnimation()
+        return button
+    }()
+
+    private lazy var rowStackView: UIStackView = {
+        let stack = UIStackView(arrangedSubviews: [iconImageView, textStackView, buyButton])
+        stack.axis = .horizontal
+        stack.alignment = .center
+        stack.spacing = 10
+        stack.translatesAutoresizingMaskIntoConstraints = false
+        return stack
+    }()
+
+    // MARK: - Properties
+
+    var onBuyTap: (() -> Void)?
+
     // MARK: - Init
 
-    init(totalCost: Int) {
-        super.init(title: "Tahmini Toplam Maliyet", iconSystemName: "turkishlirasign.circle.fill")
-        amountLabel.text = "\(totalCost) TL"
+    init(transportType: TransportType) {
+        super.init(frame: .zero)
+        iconImageView.image = UIImage(systemName: transportType.departureIconName)
+        titleLabel.text = transportType.title
+        priceLabel.text = "Kişi başı min. \(Self.mockMinimumPrice(for: transportType)) TL"
         setupLayout()
     }
 
@@ -637,12 +818,122 @@ private final class TripSummaryTotalCostView: BaseCardView {
     // MARK: - Setup
 
     private func setupLayout() {
-        contentContainerView.addSubview(amountLabel)
+        addSubview(rowStackView)
         NSLayoutConstraint.activate([
-            amountLabel.topAnchor.constraint(equalTo: contentContainerView.topAnchor),
-            amountLabel.leadingAnchor.constraint(equalTo: contentContainerView.leadingAnchor),
-            amountLabel.trailingAnchor.constraint(lessThanOrEqualTo: contentContainerView.trailingAnchor),
-            amountLabel.bottomAnchor.constraint(equalTo: contentContainerView.bottomAnchor)
+            rowStackView.topAnchor.constraint(equalTo: topAnchor),
+            rowStackView.leadingAnchor.constraint(equalTo: leadingAnchor),
+            rowStackView.trailingAnchor.constraint(equalTo: trailingAnchor),
+            rowStackView.bottomAnchor.constraint(equalTo: bottomAnchor),
+            iconImageView.widthAnchor.constraint(equalToConstant: 18),
+            iconImageView.heightAnchor.constraint(equalToConstant: 18)
         ])
+    }
+
+    // MARK: - Actions
+
+    @objc private func didTapBuy() {
+        onBuyTap?()
+    }
+
+    // MARK: - Private
+
+    private static func mockMinimumPrice(for transportType: TransportType) -> Int {
+        switch transportType {
+        case .airplane: return 2250
+        case .bus: return 850
+        case .car: return 450
+        }
+    }
+}
+
+// MARK: - TripSummaryTotalCostView
+
+private final class TripSummaryTotalCostView: BaseCardView {
+
+    // MARK: - UI Components
+
+    /// Sits next to the "Tahmini Toplam Maliyet" title itself (as the card header's
+    /// accessory) instead of on its own row below — the money figure and its label read as
+    /// one unit that way, and the card no longer needs its own currency-icon badge to say
+    /// "this is about money" since the amount is right there in the header.
+    private let amountLabel: UILabel = {
+        let label = UILabel()
+        label.font = .systemFont(ofSize: 17, weight: .bold)
+        label.textColor = .wraithPrimary
+        label.translatesAutoresizingMaskIntoConstraints = false
+        return label
+    }()
+
+    /// Lives in the same card as the total cost, and its own title states that exact amount
+    /// — so it reads as "this button pays this price" rather than two unrelated blocks.
+    private lazy var purchaseButton: UIButton = {
+        var configuration = UIButton.Configuration.filled()
+        configuration.image = UIImage(systemName: "checkmark.seal.fill")
+        configuration.imagePadding = 8
+        configuration.baseBackgroundColor = TripAccentTheme.accent
+        configuration.baseForegroundColor = .wraithOnPrimary
+        configuration.cornerStyle = .large
+        configuration.titleTextAttributesTransformer = UIConfigurationTextAttributesTransformer { incoming in
+            var outgoing = incoming
+            outgoing.font = .systemFont(ofSize: 16, weight: .semibold)
+            return outgoing
+        }
+        let button = UIButton(configuration: configuration)
+        button.translatesAutoresizingMaskIntoConstraints = false
+        button.heightAnchor.constraint(equalToConstant: 48).isActive = true
+        button.addTarget(self, action: #selector(didTapPurchase), for: .touchUpInside)
+        return button
+    }()
+
+    // MARK: - Properties
+
+    var onPurchaseTap: (() -> Void)?
+
+    // MARK: - Init
+
+    init(totalCost: Int) {
+        super.init(title: "Tahmini Toplam Maliyet", accessoryView: amountLabel)
+        updateAmount(totalCost)
+        setupLayout()
+    }
+
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    // MARK: - Public
+
+    func updateAmount(_ totalCost: Int) {
+        let formattedAmount = Self.amountFormatter.string(from: NSNumber(value: totalCost)) ?? "\(totalCost)"
+        amountLabel.text = "\(formattedAmount) TL"
+        purchaseButton.configuration?.title = "\(formattedAmount) TL Öde ve Tamamla"
+    }
+
+    // MARK: - Private
+
+    private static let amountFormatter: NumberFormatter = {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .decimal
+        formatter.groupingSeparator = "."
+        formatter.maximumFractionDigits = 0
+        return formatter
+    }()
+
+    // MARK: - Setup
+
+    private func setupLayout() {
+        contentContainerView.addSubview(purchaseButton)
+        NSLayoutConstraint.activate([
+            purchaseButton.topAnchor.constraint(equalTo: contentContainerView.topAnchor),
+            purchaseButton.leadingAnchor.constraint(equalTo: contentContainerView.leadingAnchor),
+            purchaseButton.trailingAnchor.constraint(equalTo: contentContainerView.trailingAnchor),
+            purchaseButton.bottomAnchor.constraint(equalTo: contentContainerView.bottomAnchor)
+        ])
+    }
+
+    // MARK: - Actions
+
+    @objc private func didTapPurchase() {
+        onPurchaseTap?()
     }
 }

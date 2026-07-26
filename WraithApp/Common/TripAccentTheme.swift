@@ -19,6 +19,10 @@ enum TripAccentTheme {
         accent.withAlphaComponent(0.12)
     }
 
+    static var selectionSoftBackground: UIColor {
+        UIColor.wraithSelection.withAlphaComponent(0.12)
+    }
+
     static var cardShadowColor: UIColor {
         .wraithCardShadow
     }

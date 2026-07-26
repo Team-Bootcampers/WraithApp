@@ -14,14 +14,17 @@ final class AllPlacesViewController: UIViewController {
     private lazy var collectionViewLayout: UICollectionViewFlowLayout = {
         let layout = UICollectionViewFlowLayout()
         layout.minimumInteritemSpacing = WraithSpacing.space12
-        layout.minimumLineSpacing = WraithSpacing.space16
-        layout.sectionInset = UIEdgeInsets(top: WraithSpacing.space16, left: WraithSpacing.space16, bottom: WraithSpacing.space16, right: WraithSpacing.space16)
+        layout.minimumLineSpacing = WraithSpacing.space18
+        layout.sectionInset = UIEdgeInsets(top: WraithSpacing.space18, left: WraithSpacing.space16, bottom: WraithSpacing.space18, right: WraithSpacing.space16)
         return layout
     }()
 
     private lazy var collectionView: UICollectionView = {
         let collectionView = UICollectionView(frame: .zero, collectionViewLayout: collectionViewLayout)
-        collectionView.backgroundColor = .wraithBackground
+        // Clear so the view's own background (`wraithSurface`, matching the "Gezilecek
+        // Yerler" card) shows through directly instead of the collection view painting its
+        // own opaque fill on top.
+        collectionView.backgroundColor = .clear
         collectionView.translatesAutoresizingMaskIntoConstraints = false
         collectionView.dataSource = self
         collectionView.delegate = self
@@ -34,6 +37,7 @@ final class AllPlacesViewController: UIViewController {
     private let city: String
     private let viewModel: TripCreationViewModel
     private var stateObserverID: UUID?
+    private var lastPlaceIDs: [String] = []
 
     // MARK: - Init
 
@@ -58,7 +62,7 @@ final class AllPlacesViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         title = "\(city) Gezilecek Yerler"
-        view.backgroundColor = .wraithBackground
+        view.backgroundColor = .wraithSurface
         setupLayout()
         bindViewModel()
     }
@@ -92,9 +96,27 @@ final class AllPlacesViewController: UIViewController {
     // MARK: - Binding
 
     private func bindViewModel() {
-        stateObserverID = viewModel.addObserver { [weak self] _ in
-            self?.collectionView.reloadData()
+        lastPlaceIDs = viewModel.places.map(\.id)
+        stateObserverID = viewModel.addObserver { [weak self] draft in
+            guard let self else { return }
+            // See `AllHotelsViewController`'s equivalent observer — selection toggles are
+            // handled per-cell in `onTap`, so only reload when the place list itself changed.
+            let currentIDs = draft.places.map(\.id)
+            guard currentIDs != self.lastPlaceIDs else { return }
+            self.lastPlaceIDs = currentIDs
+            self.collectionView.reloadData()
         }
+    }
+
+    private func displayItem(for place: Place) -> POIDisplayItem {
+        POIDisplayItem(
+            id: place.id,
+            name: place.name,
+            rating: place.rating,
+            priceText: nil,
+            imageURL: place.imageURL,
+            isSelected: viewModel.isPlaceSelected(place)
+        )
     }
 }
 
@@ -108,16 +130,11 @@ extension AllPlacesViewController: UICollectionViewDataSource, UICollectionViewD
     func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
         let cell = collectionView.dequeueReusableCell(withReuseIdentifier: POIGridCell.reuseIdentifier, for: indexPath) as! POIGridCell
         let place = viewModel.places[indexPath.item]
-        cell.cardView.configure(with: POIDisplayItem(
-            id: place.id,
-            name: place.name,
-            rating: place.rating,
-            priceText: nil,
-            imageURL: place.imageURL,
-            isSelected: viewModel.isPlaceSelected(place)
-        ))
-        cell.cardView.onTap = { [weak self] in
-            self?.viewModel.togglePlaceSelection(place)
+        cell.cardView.configure(with: displayItem(for: place))
+        cell.cardView.onTap = { [weak self, weak cell] in
+            guard let self else { return }
+            self.viewModel.togglePlaceSelection(place)
+            cell?.cardView.configure(with: self.displayItem(for: place))
         }
         return cell
     }

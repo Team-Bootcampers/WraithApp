@@ -79,11 +79,11 @@ final class StopSectionView: BaseCardView {
 
         NSLayoutConstraint.activate([
             innerCardsStackView.topAnchor.constraint(equalTo: contentContainerView.topAnchor),
-            // Bleed slightly past the standard card padding so the nested cards aren't
-            // squeezed by two layers of inset (this section's own padding plus each
-            // nested card's own padding).
-            innerCardsStackView.leadingAnchor.constraint(equalTo: contentContainerView.leadingAnchor, constant: -WraithSpacing.space8),
-            innerCardsStackView.trailingAnchor.constraint(equalTo: contentContainerView.trailingAnchor, constant: WraithSpacing.space8),
+            // Flush with `contentContainerView`'s own edges — `contentContainerView` clips
+            // (needed for the collapse animation below), so bleeding the nested cards past
+            // its bounds used to clip off their rounded corners on both sides.
+            innerCardsStackView.leadingAnchor.constraint(equalTo: contentContainerView.leadingAnchor),
+            innerCardsStackView.trailingAnchor.constraint(equalTo: contentContainerView.trailingAnchor),
             innerCardsBottomConstraint
         ])
     }

@@ -14,14 +14,17 @@ final class AllRestaurantsViewController: UIViewController {
     private lazy var collectionViewLayout: UICollectionViewFlowLayout = {
         let layout = UICollectionViewFlowLayout()
         layout.minimumInteritemSpacing = WraithSpacing.space12
-        layout.minimumLineSpacing = WraithSpacing.space16
-        layout.sectionInset = UIEdgeInsets(top: WraithSpacing.space16, left: WraithSpacing.space16, bottom: WraithSpacing.space16, right: WraithSpacing.space16)
+        layout.minimumLineSpacing = WraithSpacing.space18
+        layout.sectionInset = UIEdgeInsets(top: WraithSpacing.space18, left: WraithSpacing.space16, bottom: WraithSpacing.space18, right: WraithSpacing.space16)
         return layout
     }()
 
     private lazy var collectionView: UICollectionView = {
         let collectionView = UICollectionView(frame: .zero, collectionViewLayout: collectionViewLayout)
-        collectionView.backgroundColor = .wraithBackground
+        // Clear so the view's own background (`wraithSurface`, matching the "Restoranlar"
+        // card) shows through directly instead of the collection view painting its own
+        // opaque fill on top.
+        collectionView.backgroundColor = .clear
         collectionView.translatesAutoresizingMaskIntoConstraints = false
         collectionView.dataSource = self
         collectionView.delegate = self
@@ -34,6 +37,7 @@ final class AllRestaurantsViewController: UIViewController {
     private let city: String
     private let viewModel: TripCreationViewModel
     private var stateObserverID: UUID?
+    private var lastRestaurantIDs: [String] = []
 
     // MARK: - Init
 
@@ -58,7 +62,7 @@ final class AllRestaurantsViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         title = "\(city) Restoranları"
-        view.backgroundColor = .wraithBackground
+        view.backgroundColor = .wraithSurface
         setupLayout()
         bindViewModel()
     }
@@ -92,9 +96,28 @@ final class AllRestaurantsViewController: UIViewController {
     // MARK: - Binding
 
     private func bindViewModel() {
-        stateObserverID = viewModel.addObserver { [weak self] _ in
-            self?.collectionView.reloadData()
+        lastRestaurantIDs = viewModel.restaurants.map(\.id)
+        stateObserverID = viewModel.addObserver { [weak self] draft in
+            guard let self else { return }
+            // See `AllHotelsViewController`'s equivalent observer — selection toggles are
+            // handled per-cell in `onTap`, so only reload when the restaurant list itself
+            // changed.
+            let currentIDs = draft.restaurants.map(\.id)
+            guard currentIDs != self.lastRestaurantIDs else { return }
+            self.lastRestaurantIDs = currentIDs
+            self.collectionView.reloadData()
         }
+    }
+
+    private func displayItem(for restaurant: Restaurant) -> POIDisplayItem {
+        POIDisplayItem(
+            id: restaurant.id,
+            name: restaurant.name,
+            rating: restaurant.rating,
+            priceText: nil,
+            imageURL: restaurant.imageURL,
+            isSelected: viewModel.isRestaurantSelected(restaurant)
+        )
     }
 }
 
@@ -108,16 +131,11 @@ extension AllRestaurantsViewController: UICollectionViewDataSource, UICollection
     func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
         let cell = collectionView.dequeueReusableCell(withReuseIdentifier: POIGridCell.reuseIdentifier, for: indexPath) as! POIGridCell
         let restaurant = viewModel.restaurants[indexPath.item]
-        cell.cardView.configure(with: POIDisplayItem(
-            id: restaurant.id,
-            name: restaurant.name,
-            rating: restaurant.rating,
-            priceText: nil,
-            imageURL: restaurant.imageURL,
-            isSelected: viewModel.isRestaurantSelected(restaurant)
-        ))
-        cell.cardView.onTap = { [weak self] in
-            self?.viewModel.toggleRestaurantSelection(restaurant)
+        cell.cardView.configure(with: displayItem(for: restaurant))
+        cell.cardView.onTap = { [weak self, weak cell] in
+            guard let self else { return }
+            self.viewModel.toggleRestaurantSelection(restaurant)
+            cell?.cardView.configure(with: self.displayItem(for: restaurant))
         }
         return cell
     }

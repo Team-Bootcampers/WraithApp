@@ -28,7 +28,7 @@ final class HomeViewModel {
     private var favoriteTripIDs: Set<String> = []
 
     private static let minimumSearchLength = 3
-    private static let searchDebounceNanoseconds: UInt64 = 350_000_000
+    private static let searchDebounceNanoseconds: UInt64 = 450_000_000
 
     // MARK: - Init
 
@@ -114,8 +114,16 @@ final class HomeViewModel {
 
     private func refresh() {
         loadTask?.cancel()
+        // Only notify immediately when a loading spinner actually needs to appear (first
+        // load, nothing on screen yet). When refining a search with results already
+        // visible, this used to fire an extra `onStateChange` — and therefore an extra
+        // `tableView.reloadData()` — with the same, not-yet-updated list, before the real
+        // one landed a moment later. That's what made each search feel like it "reloaded
+        // twice" per commit.
         isLoading = trips.isEmpty
-        onStateChange?()
+        if isLoading {
+            onStateChange?()
+        }
 
         let query = activeQuery
         let sortOption = sortOption

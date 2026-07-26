@@ -65,6 +65,8 @@ final class GradientCapsuleButton: UIButton {
             activityIndicator.centerXAnchor.constraint(equalTo: centerXAnchor),
             activityIndicator.centerYAnchor.constraint(equalTo: centerYAnchor)
         ])
+
+        applyStandardPressAnimation()
     }
 
     override func layoutSubviews() {

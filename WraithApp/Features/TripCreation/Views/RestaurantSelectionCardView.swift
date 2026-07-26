@@ -14,7 +14,7 @@ final class RestaurantSelectionCardView: BaseCardView, TripCreationCardUpdating 
     private let seeAllButton: UIButton
 
     private lazy var itemCardViews: [POIMiniCardView] = (0..<5).map { index in
-        let view = POIMiniCardView()
+        let view = POIMiniCardView(photoHeight: WraithSpacing.space200)
         view.translatesAutoresizingMaskIntoConstraints = false
         view.setCardBackground(.wraithSurfaceVariant)
         view.onTap = { [weak self] in self?.didTapItemCard(at: index) }
@@ -95,7 +95,7 @@ final class RestaurantSelectionCardView: BaseCardView, TripCreationCardUpdating 
             itemsScrollView.leadingAnchor.constraint(equalTo: contentContainerView.leadingAnchor),
             itemsScrollView.trailingAnchor.constraint(equalTo: contentContainerView.trailingAnchor),
             itemsScrollView.bottomAnchor.constraint(equalTo: contentContainerView.bottomAnchor),
-            itemsScrollView.heightAnchor.constraint(equalToConstant: WraithSpacing.space220),
+            itemsScrollView.heightAnchor.constraint(equalToConstant: WraithSpacing.space280),
 
             itemsStackView.topAnchor.constraint(equalTo: itemsScrollView.topAnchor),
             itemsStackView.leadingAnchor.constraint(equalTo: itemsScrollView.leadingAnchor),
@@ -109,7 +109,7 @@ final class RestaurantSelectionCardView: BaseCardView, TripCreationCardUpdating 
             placeholderLabel.trailingAnchor.constraint(lessThanOrEqualTo: contentContainerView.trailingAnchor)
         ])
 
-        itemCardViews.forEach { $0.widthAnchor.constraint(equalTo: itemsScrollView.widthAnchor, multiplier: 0.7).isActive = true }
+        itemCardViews.forEach { $0.widthAnchor.constraint(equalTo: itemsScrollView.widthAnchor, multiplier: 0.82).isActive = true }
     }
 
     // MARK: - Binding

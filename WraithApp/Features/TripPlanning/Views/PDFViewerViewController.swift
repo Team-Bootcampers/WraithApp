@@ -25,6 +25,7 @@ final class PDFViewerViewController: UIViewController {
     // MARK: - Properties
 
     private let fileURL: URL
+    private var hasScrolledToFirstPage = false
 
     // MARK: - Init
 
@@ -46,6 +47,16 @@ final class PDFViewerViewController: UIViewController {
         navigationItem.rightBarButtonItem = UIBarButtonItem(image: UIImage(systemName: "square.and.arrow.up"), style: .plain, target: self, action: #selector(didTapShare))
         pdfView.document = PDFDocument(url: fileURL)
         setupLayout()
+    }
+
+    override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+        // `autoScales` only settles once the view has its real, non-zero frame — jumping to
+        // the first page before that (e.g. from `viewDidLoad`) landed mid-document instead
+        // of at the top. Doing it once here, after layout, is the reliable point.
+        guard !hasScrolledToFirstPage, pdfView.document != nil else { return }
+        hasScrolledToFirstPage = true
+        pdfView.goToFirstPage(nil)
     }
 
     // MARK: - Setup

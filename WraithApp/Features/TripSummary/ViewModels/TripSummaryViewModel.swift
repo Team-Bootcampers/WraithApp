@@ -114,6 +114,20 @@ final class TripSummaryViewModel {
         return updatedTrip
     }
 
+    /// Generates the detailed trip-plan PDF for the currently saved trip and persists the
+    /// result. Only callable once the trip has actually been saved — a browsed-but-unsaved
+    /// preview has no id/stops to generate a plan from.
+    func generateDetailedPlan() async throws {
+        guard let trip = savedTrip else { return }
+        let result = try await TripPlanningService().generatePlanPDF(for: trip)
+        var updatedTrip = trip
+        updatedTrip.tripPlanPDFFileName = result.fileName
+        updatedTrip.estimatedTotalCostAmount = result.totalEstimatedCost.amount
+        updatedTrip.estimatedTotalCostCurrency = result.totalEstimatedCost.currency
+        TripStore.shared.save(updatedTrip)
+        source = .savedTrip(updatedTrip)
+    }
+
     // MARK: - Cost Calculation
 
     func totalCost(for stop: TripStopSnapshot) -> Int {

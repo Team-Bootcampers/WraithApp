@@ -14,14 +14,17 @@ final class AllHotelsViewController: UIViewController {
     private lazy var collectionViewLayout: UICollectionViewFlowLayout = {
         let layout = UICollectionViewFlowLayout()
         layout.minimumInteritemSpacing = WraithSpacing.space12
-        layout.minimumLineSpacing = WraithSpacing.space16
-        layout.sectionInset = UIEdgeInsets(top: WraithSpacing.space16, left: WraithSpacing.space16, bottom: WraithSpacing.space16, right: WraithSpacing.space16)
+        layout.minimumLineSpacing = WraithSpacing.space18
+        layout.sectionInset = UIEdgeInsets(top: WraithSpacing.space18, left: WraithSpacing.space16, bottom: WraithSpacing.space18, right: WraithSpacing.space16)
         return layout
     }()
 
     private lazy var collectionView: UICollectionView = {
         let collectionView = UICollectionView(frame: .zero, collectionViewLayout: collectionViewLayout)
-        collectionView.backgroundColor = .wraithBackground
+        // Clear so the view's own background (`wraithSurface`, matching the "Konaklama
+        // Seçenekleri" card) shows through directly instead of the collection view
+        // painting its own opaque fill on top.
+        collectionView.backgroundColor = .clear
         collectionView.translatesAutoresizingMaskIntoConstraints = false
         collectionView.dataSource = self
         collectionView.delegate = self
@@ -34,6 +37,7 @@ final class AllHotelsViewController: UIViewController {
     private let city: String
     private let viewModel: TripCreationViewModel
     private var stateObserverID: UUID?
+    private var lastHotelIDs: [String] = []
 
     // MARK: - Init
 
@@ -58,7 +62,7 @@ final class AllHotelsViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         title = "\(city) Otelleri"
-        view.backgroundColor = .wraithBackground
+        view.backgroundColor = .wraithSurface
         setupLayout()
         bindViewModel()
     }
@@ -92,9 +96,30 @@ final class AllHotelsViewController: UIViewController {
     // MARK: - Binding
 
     private func bindViewModel() {
-        stateObserverID = viewModel.addObserver { [weak self] _ in
-            self?.collectionView.reloadData()
+        lastHotelIDs = viewModel.hotels.map(\.id)
+        stateObserverID = viewModel.addObserver { [weak self] draft in
+            guard let self else { return }
+            // A selection toggle also fires this observer (it's a mutation of the same
+            // draft), but that's handled per-cell in `onTap` below — reloading the whole
+            // collection view here on every toggle used to make every visible card replay
+            // its selection animation, not just the one that was tapped. Only reload when
+            // the hotel list itself actually changed (e.g. a new city was picked).
+            let currentIDs = draft.hotels.map(\.id)
+            guard currentIDs != self.lastHotelIDs else { return }
+            self.lastHotelIDs = currentIDs
+            self.collectionView.reloadData()
         }
+    }
+
+    private func displayItem(for hotel: Hotel) -> POIDisplayItem {
+        POIDisplayItem(
+            id: hotel.id,
+            name: hotel.name,
+            rating: hotel.rating,
+            priceText: "\(hotel.pricePerNight) \(hotel.currency)/gece",
+            imageURL: hotel.imageURL,
+            isSelected: viewModel.isHotelSelected(hotel)
+        )
     }
 }
 
@@ -108,16 +133,13 @@ extension AllHotelsViewController: UICollectionViewDataSource, UICollectionViewD
     func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
         let cell = collectionView.dequeueReusableCell(withReuseIdentifier: POIGridCell.reuseIdentifier, for: indexPath) as! POIGridCell
         let hotel = viewModel.hotels[indexPath.item]
-        cell.cardView.configure(with: POIDisplayItem(
-            id: hotel.id,
-            name: hotel.name,
-            rating: hotel.rating,
-            priceText: "\(hotel.pricePerNight) \(hotel.currency)/gece",
-            imageURL: hotel.imageURL,
-            isSelected: viewModel.isHotelSelected(hotel)
-        ))
-        cell.cardView.onTap = { [weak self] in
-            self?.viewModel.toggleHotelSelection(hotel)
+        cell.cardView.configure(with: displayItem(for: hotel))
+        cell.cardView.onTap = { [weak self, weak cell] in
+            guard let self else { return }
+            self.viewModel.toggleHotelSelection(hotel)
+            // Reconfigure just this cell directly instead of going through the broader
+            // observer, so only the card that was actually tapped animates.
+            cell?.cardView.configure(with: self.displayItem(for: hotel))
         }
         return cell
     }
