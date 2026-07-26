@@ -108,7 +108,7 @@ final class SurpriseTripViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = .wraithBackground
-        title = "Sürpriz Beni"
+        title = "Şaşırt Beni"
         setupLayout()
         setupKeyboardDismissal()
     }

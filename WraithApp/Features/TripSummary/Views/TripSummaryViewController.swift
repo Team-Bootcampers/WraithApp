@@ -50,21 +50,13 @@ final class TripSummaryViewController: UIViewController {
         return button
     }()
 
-    private lazy var publicButton: UIButton = {
-        let button = UIButton(configuration: publicButtonConfiguration(isPublic: viewModel.isPublic))
-        button.translatesAutoresizingMaskIntoConstraints = false
-        button.heightAnchor.constraint(equalToConstant: 52).isActive = true
-        button.addTarget(self, action: #selector(didTapMakePublic), for: .touchUpInside)
-        return button
-    }()
-
-    private lazy var saveTripButton: UIButton = {
+    private lazy var planPDFButton: UIButton = {
         var configuration = UIButton.Configuration.filled()
-        configuration.title = "Seyahati Kaydet"
-        configuration.image = UIImage(systemName: "bookmark.fill")
+        configuration.title = "Detaylı Gezi Planı"
+        configuration.image = UIImage(systemName: "doc.text.fill")
         configuration.imagePadding = 8
-        configuration.baseBackgroundColor = TripAccentTheme.accent
-        configuration.baseForegroundColor = .wraithOnPrimary
+        configuration.baseBackgroundColor = .wraithSecondary
+        configuration.baseForegroundColor = .wraithOnSurface
         configuration.cornerStyle = .large
         configuration.titleTextAttributesTransformer = UIConfigurationTextAttributesTransformer { incoming in
             var outgoing = incoming
@@ -74,20 +66,18 @@ final class TripSummaryViewController: UIViewController {
         let button = UIButton(configuration: configuration)
         button.translatesAutoresizingMaskIntoConstraints = false
         button.heightAnchor.constraint(equalToConstant: 52).isActive = true
-        button.addTarget(self, action: #selector(didTapSaveTrip), for: .touchUpInside)
+        button.addTarget(self, action: #selector(didTapViewPlan), for: .touchUpInside)
         return button
     }()
 
     // MARK: - Properties
 
     private let viewModel: TripSummaryViewModel
-    private let publishingService: TripPublishingServiceProtocol
 
     // MARK: - Init
 
-    init(viewModel: TripSummaryViewModel, publishingService: TripPublishingServiceProtocol = MockTripPublishingService()) {
+    init(viewModel: TripSummaryViewModel) {
         self.viewModel = viewModel
-        self.publishingService = publishingService
         super.init(nibName: nil, bundle: nil)
     }
 
@@ -101,9 +91,7 @@ final class TripSummaryViewController: UIViewController {
         super.viewDidLoad()
         title = "Seyahat Özeti"
         view.backgroundColor = .wraithBackground
-        if !viewModel.stops.isEmpty {
-            navigationItem.rightBarButtonItem = UIBarButtonItem(title: "Düzenle", style: .plain, target: self, action: #selector(didTapEditTrip))
-        }
+        navigationItem.rightBarButtonItem = UIBarButtonItem(title: "Düzenle", style: .plain, target: self, action: #selector(didTapEditTrip))
         setupLayout()
     }
 
@@ -113,12 +101,7 @@ final class TripSummaryViewController: UIViewController {
         view.addSubview(scrollView)
         scrollView.addSubview(contentStackView)
 
-        if let preview = viewModel.browsedTripPreview {
-            contentStackView.addArrangedSubview(BrowsedTripHeroView(preview: preview))
-            contentStackView.addArrangedSubview(BrowsedTripInfoCardView(preview: preview))
-        } else {
-            contentStackView.addArrangedSubview(heroView)
-        }
+        contentStackView.addArrangedSubview(heroView)
 
         for stop in viewModel.stops {
             let nights = viewModel.nightsCount(for: stop)
@@ -127,18 +110,11 @@ final class TripSummaryViewController: UIViewController {
             contentStackView.addArrangedSubview(stopCardView)
         }
 
-        if !viewModel.stops.isEmpty {
-            contentStackView.addArrangedSubview(totalCostView)
+        contentStackView.addArrangedSubview(totalCostView)
+        if viewModel.tripPlanPDFURL != nil {
+            contentStackView.addArrangedSubview(planPDFButton)
         }
-        if viewModel.savedTrip != nil {
-            contentStackView.addArrangedSubview(publicButton)
-        }
-        if !viewModel.stops.isEmpty {
-            contentStackView.addArrangedSubview(purchaseButton)
-        }
-        if viewModel.canSaveBrowsedTrip {
-            contentStackView.addArrangedSubview(saveTripButton)
-        }
+        contentStackView.addArrangedSubview(purchaseButton)
 
         NSLayoutConstraint.activate([
             scrollView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
@@ -157,8 +133,7 @@ final class TripSummaryViewController: UIViewController {
     // MARK: - Actions
 
     @objc private func didTapEditTrip() {
-        guard let savedTrip = viewModel.savedTrip else { return }
-        let editViewController = TripCreationViewController(existingTrip: savedTrip)
+        let editViewController = TripCreationViewController(existingTrip: viewModel.trip)
         if let navigationController {
             navigationController.pushViewController(editViewController, animated: true)
         } else {
@@ -166,102 +141,17 @@ final class TripSummaryViewController: UIViewController {
         }
     }
 
+    @objc private func didTapViewPlan() {
+        guard let url = viewModel.tripPlanPDFURL else { return }
+        navigationController?.pushViewController(PDFViewerViewController(fileURL: url), animated: true)
+    }
+
     @objc private func didTapPurchase() {
-        showAlert(title: "Bilet Satın Alındı", message: "Seyahatiniz için biletler başarıyla satın alındı.")
-    }
-
-    @objc private func didTapSaveTrip() {
-        guard viewModel.saveBrowsedTrip() != nil else { return }
-        saveTripButton.isEnabled = false
-        saveTripButton.configuration?.title = "Kaydedildi"
-        showAlert(title: "Kaydedildi", message: "Seyahat \"Seyahatlerim\" kısmına kaydedildi.")
-    }
-
-    @objc private func didTapMakePublic() {
-        guard let savedTrip = viewModel.savedTrip else { return }
-
-        if savedTrip.isPublic {
-            confirmUnpublish(tripID: savedTrip.id)
-        } else {
-            presentPublishForm(tripID: savedTrip.id)
-        }
-    }
-
-    // MARK: - Private
-
-    private func publicButtonConfiguration(isPublic: Bool) -> UIButton.Configuration {
-        var configuration = UIButton.Configuration.filled()
-        configuration.title = isPublic ? "Herkese Açık Özelliğini Kapat" : "Herkese Aç"
-        configuration.image = UIImage(systemName: isPublic ? "globe.slash.fill" : "globe")
-        configuration.imagePadding = 8
-        configuration.baseBackgroundColor = isPublic ? .wraithSurfaceVariant : .wraithSecondary
-        configuration.baseForegroundColor = isPublic ? .wraithOnSurfaceVariant : .wraithOnSurface
-        configuration.cornerStyle = .large
-        configuration.titleTextAttributesTransformer = UIConfigurationTextAttributesTransformer { incoming in
-            var outgoing = incoming
-            outgoing.font = .systemFont(ofSize: 17, weight: .semibold)
-            return outgoing
-        }
-        return configuration
-    }
-
-    private func updatePublicButtonAppearance() {
-        publicButton.configuration = publicButtonConfiguration(isPublic: viewModel.isPublic)
-    }
-
-    private func presentPublishForm(tripID: UUID) {
-        let formViewController = PublishTripFormViewController()
-        formViewController.onSubmit = { [weak self, weak formViewController] title, description in
-            formViewController?.dismiss(animated: true) {
-                self?.publishTrip(id: tripID, title: title, description: description)
-            }
-        }
-        present(UINavigationController(rootViewController: formViewController), animated: true)
-    }
-
-    private func confirmUnpublish(tripID: UUID) {
         let alert = UIAlertController(
-            title: "Herkese Açıklığı Kapat",
-            message: "Bu seyahat artık diğer kullanıcılar tarafından görüntülenemeyecek.",
+            title: "Bilet Satın Alındı",
+            message: "Seyahatiniz için biletler başarıyla satın alındı.",
             preferredStyle: .alert
         )
-        alert.addAction(UIAlertAction(title: "Vazgeç", style: .cancel))
-        alert.addAction(UIAlertAction(title: "Kapat", style: .destructive) { [weak self] _ in
-            self?.unpublishTrip(id: tripID)
-        })
-        present(alert, animated: true)
-    }
-
-    private func publishTrip(id: UUID, title: String, description: String) {
-        Task { [weak self] in
-            guard let self else { return }
-            do {
-                try await publishingService.publishTrip(tripID: id, title: title, description: description)
-                viewModel.setPublic(true)
-                updatePublicButtonAppearance()
-                showAlert(title: "Paylaşıldı", message: "Seyahatin herkese açık hale getirildi.")
-            } catch {
-                showAlert(title: "Bir Sorun Oluştu", message: "Seyahat paylaşılamadı, lütfen tekrar dene.")
-            }
-        }
-    }
-
-    private func unpublishTrip(id: UUID) {
-        Task { [weak self] in
-            guard let self else { return }
-            do {
-                try await publishingService.unpublishTrip(tripID: id)
-                viewModel.setPublic(false)
-                updatePublicButtonAppearance()
-                showAlert(title: "Kapatıldı", message: "Seyahat artık herkese açık değil.")
-            } catch {
-                showAlert(title: "Bir Sorun Oluştu", message: "İşlem tamamlanamadı, lütfen tekrar dene.")
-            }
-        }
-    }
-
-    private func showAlert(title: String, message: String) {
-        let alert = UIAlertController(title: title, message: message, preferredStyle: .alert)
         alert.addAction(UIAlertAction(title: "Tamam", style: .default))
         present(alert, animated: true)
     }
@@ -599,179 +489,4 @@ private final class TripSummaryTotalCostView: BaseCardView {
             amountLabel.bottomAnchor.constraint(equalTo: contentContainerView.bottomAnchor)
         ])
     }
-}
-
-// MARK: - BrowsedTripHeroView
-
-/// Shows the image, title and description the user saw on the Home card, so a browsed
-/// trip's summary opens with visual continuity from wherever it was tapped.
-private final class BrowsedTripHeroView: UIView {
-
-    // MARK: - UI Components
-
-    private lazy var photoImageView: UIImageView = {
-        let imageView = UIImageView()
-        imageView.contentMode = .scaleAspectFill
-        imageView.clipsToBounds = true
-        imageView.backgroundColor = .wraithSurfaceVariant
-        imageView.translatesAutoresizingMaskIntoConstraints = false
-        return imageView
-    }()
-
-    private lazy var scrimView: PhotoScrimGradientView = {
-        let view = PhotoScrimGradientView()
-        view.translatesAutoresizingMaskIntoConstraints = false
-        return view
-    }()
-
-    private lazy var titleLabel: UILabel = {
-        let label = UILabel()
-        label.font = .systemFont(ofSize: 22, weight: .bold)
-        label.textColor = .wraithOnPrimary
-        label.numberOfLines = 2
-        label.translatesAutoresizingMaskIntoConstraints = false
-        return label
-    }()
-
-    private lazy var descriptionLabel: UILabel = {
-        let label = UILabel()
-        label.font = .systemFont(ofSize: 14, weight: .regular)
-        label.textColor = .wraithOnSurfaceVariant
-        label.numberOfLines = 0
-        label.translatesAutoresizingMaskIntoConstraints = false
-        return label
-    }()
-
-    // MARK: - Init
-
-    init(preview: BrowsedTripPreview) {
-        super.init(frame: .zero)
-        photoImageView.setImage(from: preview.imageURL)
-        titleLabel.text = preview.title
-        descriptionLabel.text = preview.description
-        setupLayout()
-    }
-
-    required init?(coder: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
-    }
-
-    // MARK: - Setup
-
-    private func setupLayout() {
-        let imageContainerView = UIView()
-        imageContainerView.layer.cornerRadius = WraithRadius.radius24
-        imageContainerView.clipsToBounds = true
-        imageContainerView.translatesAutoresizingMaskIntoConstraints = false
-
-        imageContainerView.addSubview(photoImageView)
-        imageContainerView.addSubview(scrimView)
-        imageContainerView.addSubview(titleLabel)
-
-        let stack = UIStackView(arrangedSubviews: [imageContainerView, descriptionLabel])
-        stack.axis = .vertical
-        stack.spacing = WraithSpacing.space12
-        stack.translatesAutoresizingMaskIntoConstraints = false
-        addSubview(stack)
-
-        NSLayoutConstraint.activate([
-            stack.topAnchor.constraint(equalTo: topAnchor),
-            stack.leadingAnchor.constraint(equalTo: leadingAnchor),
-            stack.trailingAnchor.constraint(equalTo: trailingAnchor),
-            stack.bottomAnchor.constraint(equalTo: bottomAnchor),
-
-            imageContainerView.heightAnchor.constraint(equalToConstant: WraithSpacing.space220),
-
-            photoImageView.topAnchor.constraint(equalTo: imageContainerView.topAnchor),
-            photoImageView.leadingAnchor.constraint(equalTo: imageContainerView.leadingAnchor),
-            photoImageView.trailingAnchor.constraint(equalTo: imageContainerView.trailingAnchor),
-            photoImageView.bottomAnchor.constraint(equalTo: imageContainerView.bottomAnchor),
-
-            scrimView.leadingAnchor.constraint(equalTo: imageContainerView.leadingAnchor),
-            scrimView.trailingAnchor.constraint(equalTo: imageContainerView.trailingAnchor),
-            scrimView.bottomAnchor.constraint(equalTo: imageContainerView.bottomAnchor),
-            scrimView.heightAnchor.constraint(equalTo: imageContainerView.heightAnchor, multiplier: 0.65),
-
-            titleLabel.leadingAnchor.constraint(equalTo: imageContainerView.leadingAnchor, constant: WraithSpacing.space16),
-            titleLabel.trailingAnchor.constraint(lessThanOrEqualTo: imageContainerView.trailingAnchor, constant: -WraithSpacing.space16),
-            titleLabel.bottomAnchor.constraint(equalTo: imageContainerView.bottomAnchor, constant: -WraithSpacing.space16)
-        ])
-    }
-}
-
-// MARK: - PhotoScrimGradientView
-
-/// Darkens the bottom of a photo so overlaid white text stays legible regardless of what's
-/// in the underlying image.
-private final class PhotoScrimGradientView: UIView {
-
-    override class var layerClass: AnyClass { CAGradientLayer.self }
-
-    private var gradientLayer: CAGradientLayer {
-        layer as! CAGradientLayer
-    }
-
-    override init(frame: CGRect) {
-        super.init(frame: frame)
-        gradientLayer.colors = [UIColor.clear.cgColor, UIColor.wraithPhotoScrimHeavy.cgColor]
-        gradientLayer.locations = [0, 1]
-        gradientLayer.startPoint = CGPoint(x: 0.5, y: 0)
-        gradientLayer.endPoint = CGPoint(x: 0.5, y: 1)
-    }
-
-    required init?(coder: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
-    }
-}
-
-// MARK: - BrowsedTripInfoCardView
-
-/// The rating, review count, trip duration and price the user saw on the Home card,
-/// restated here since the itinerary-based summary sections below don't apply yet.
-private final class BrowsedTripInfoCardView: BaseCardView {
-
-    // MARK: - Init
-
-    init(preview: BrowsedTripPreview) {
-        super.init(title: "Seyahat Bilgileri", iconSystemName: "info.circle.fill")
-        setupContent(preview: preview)
-    }
-
-    required init?(coder: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
-    }
-
-    // MARK: - Setup
-
-    private func setupContent(preview: BrowsedTripPreview) {
-        let ratingText = String(format: "%.1f (%d değerlendirme)", preview.rating, preview.reviewCount)
-        let priceText = "\(Self.priceFormatter.string(from: NSNumber(value: preview.price)) ?? "\(preview.price)") \(preview.currency)"
-
-        let rows = [
-            SummaryInfoRow(iconSystemName: "star.fill", text: ratingText),
-            SummaryInfoRow(iconSystemName: "clock.fill", text: preview.durationText),
-            SummaryInfoRow(iconSystemName: "turkishlirasign.circle.fill", text: priceText, isEmphasized: true)
-        ]
-
-        let stack = UIStackView(arrangedSubviews: rows)
-        stack.axis = .vertical
-        stack.spacing = 10
-        stack.translatesAutoresizingMaskIntoConstraints = false
-
-        contentContainerView.addSubview(stack)
-        NSLayoutConstraint.activate([
-            stack.topAnchor.constraint(equalTo: contentContainerView.topAnchor),
-            stack.leadingAnchor.constraint(equalTo: contentContainerView.leadingAnchor),
-            stack.trailingAnchor.constraint(equalTo: contentContainerView.trailingAnchor),
-            stack.bottomAnchor.constraint(equalTo: contentContainerView.bottomAnchor)
-        ])
-    }
-
-    private static let priceFormatter: NumberFormatter = {
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .decimal
-        formatter.groupingSeparator = "."
-        formatter.maximumFractionDigits = 0
-        return formatter
-    }()
 }

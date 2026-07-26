@@ -42,6 +42,9 @@ final class TripStore {
     }
 
     func remove(_ tripID: UUID) {
+        if let fileName = loadTrips().first(where: { $0.id == tripID })?.tripPlanPDFFileName {
+            TripPlanFileStore.delete(fileName: fileName)
+        }
         let trips = loadTrips().filter { $0.id != tripID }
         persist(trips)
     }

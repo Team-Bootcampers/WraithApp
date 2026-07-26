@@ -50,6 +50,37 @@ final class TripCreationViewController: UIViewController {
         return button
     }()
 
+    private lazy var itineraryLoadingOverlayView: UIView = {
+        let view = UIView()
+        view.backgroundColor = UIColor.wraithBackground.withAlphaComponent(0.92)
+        view.isHidden = true
+        view.translatesAutoresizingMaskIntoConstraints = false
+
+        let activityIndicator = UIActivityIndicatorView(style: .large)
+        activityIndicator.color = .wraithPrimary
+        activityIndicator.startAnimating()
+        activityIndicator.translatesAutoresizingMaskIntoConstraints = false
+
+        let label = UILabel()
+        label.text = "Detaylı gezi planı hazırlanıyor..."
+        label.font = .systemFont(ofSize: 15, weight: .semibold)
+        label.textColor = .wraithOnSurface
+        label.numberOfLines = 0
+        label.textAlignment = .center
+        label.translatesAutoresizingMaskIntoConstraints = false
+
+        view.addSubview(activityIndicator)
+        view.addSubview(label)
+        NSLayoutConstraint.activate([
+            activityIndicator.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            activityIndicator.centerYAnchor.constraint(equalTo: view.centerYAnchor, constant: -20),
+            label.topAnchor.constraint(equalTo: activityIndicator.bottomAnchor, constant: WraithSpacing.space16),
+            label.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: WraithSpacing.space40),
+            label.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -WraithSpacing.space40)
+        ])
+        return view
+    }()
+
     // MARK: - Properties
 
     var onTripSaved: ((SavedTrip) -> Void)?
@@ -94,6 +125,7 @@ final class TripCreationViewController: UIViewController {
         view.addSubview(saveButtonContainerView)
         scrollView.addSubview(cardsStackView)
         saveButtonContainerView.addSubview(saveButton)
+        view.addSubview(itineraryLoadingOverlayView)
 
         cardsStackView.addArrangedSubview(addStopCardView)
 
@@ -116,7 +148,12 @@ final class TripCreationViewController: UIViewController {
             saveButton.topAnchor.constraint(equalTo: saveButtonContainerView.topAnchor, constant: WraithSpacing.space12),
             saveButton.leadingAnchor.constraint(equalTo: saveButtonContainerView.leadingAnchor, constant: WraithSpacing.space20),
             saveButton.trailingAnchor.constraint(equalTo: saveButtonContainerView.trailingAnchor, constant: -WraithSpacing.space20),
-            saveButton.bottomAnchor.constraint(equalTo: saveButtonContainerView.safeAreaLayoutGuide.bottomAnchor, constant: -WraithSpacing.space12)
+            saveButton.bottomAnchor.constraint(equalTo: saveButtonContainerView.safeAreaLayoutGuide.bottomAnchor, constant: -WraithSpacing.space12),
+
+            itineraryLoadingOverlayView.topAnchor.constraint(equalTo: view.topAnchor),
+            itineraryLoadingOverlayView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            itineraryLoadingOverlayView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            itineraryLoadingOverlayView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
         ])
     }
 
@@ -250,18 +287,54 @@ final class TripCreationViewController: UIViewController {
         let savedTrip = SavedTrip(
             id: existingTrip?.id ?? UUID(),
             createdAt: existingTrip?.createdAt ?? Date(),
-            stops: snapshots
+            stops: snapshots,
+            tripPlanPDFFileName: existingTrip?.tripPlanPDFFileName
         )
+        // Save immediately so the trip isn't lost even if the detailed-plan generation below
+        // fails or the user leaves before it finishes.
         TripStore.shared.save(savedTrip)
 
-        if existingTrip != nil {
-            // Editing an existing trip: pop back to "Seyahatlerim" (where this screen was
-            // reached from) so it reloads with the just-saved data, instead of resetting
-            // this instance in place — this instance is being discarded, not reused.
-            navigationController?.popToRootViewController(animated: true)
-        } else {
-            resetForm()
-            onTripSaved?(savedTrip)
+        saveButton.isEnabled = false
+        saveButton.alpha = 0.4
+        itineraryLoadingOverlayView.isHidden = false
+
+        Task { [weak self] in
+            guard let self else { return }
+            var finalTrip = savedTrip
+            do {
+                let fileName = try await TripPlanningService().generatePlanPDF(for: savedTrip)
+                finalTrip.tripPlanPDFFileName = fileName
+                TripStore.shared.save(finalTrip)
+            } catch TripPlanningError.missingCharacterAnalysis {
+                // Expected before onboarding is complete — trip stays saved without a PDF.
+            } catch {
+                print("TripPlanning generation failed: \(error)")
+                presentPlanGenerationErrorAlert()
+            }
+
+            itineraryLoadingOverlayView.isHidden = true
+            saveButton.isEnabled = true
+            saveButton.alpha = 1
+
+            if existingTrip != nil {
+                // Editing an existing trip: pop back to "Seyahatlerim" (where this screen was
+                // reached from) so it reloads with the just-saved data, instead of resetting
+                // this instance in place — this instance is being discarded, not reused.
+                navigationController?.popToRootViewController(animated: true)
+            } else {
+                resetForm()
+                onTripSaved?(finalTrip)
+            }
         }
+    }
+
+    private func presentPlanGenerationErrorAlert() {
+        let alert = UIAlertController(
+            title: "Bir Sorun Oluştu",
+            message: "Detaylı gezi planı oluşturulamadı. Seyahatin kaydedildi, planı daha sonra tekrar deneyebilirsin.",
+            preferredStyle: .alert
+        )
+        alert.addAction(UIAlertAction(title: "Tamam", style: .default))
+        present(alert, animated: true)
     }
 }

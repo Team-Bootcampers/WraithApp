@@ -81,6 +81,12 @@ final class UserSession {
         refreshToken = nil
         KeychainStore.remove(KeychainKeys.idToken)
         KeychainStore.remove(KeychainKeys.refreshToken)
+
+        // Character analysis is tied to the signed-in person, not the device — clear it on
+        // logout so the next sign-in (a different person, or the same one starting over)
+        // goes through onboarding again instead of inheriting the previous session's result.
+        QuizAnswerStore.shared.clear()
+        TravelPersonalityStore.clear()
     }
 
     private func persist(_ value: String?, forKey key: String) {
