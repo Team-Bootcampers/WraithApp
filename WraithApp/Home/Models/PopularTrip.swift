@@ -7,8 +7,8 @@
 
 import Foundation
 
-/// Shaped to mirror the eventual `GET /trips` API response so swapping
-/// `MockPopularTripsService` for a real network-backed service later requires no model changes.
+/// Shaped to mirror the `GET /trips` API response, mapped from `TripListItemDto` in
+/// `PopularTripsService`.
 struct PopularTrip {
     let id: String
     let title: String
@@ -21,6 +21,10 @@ struct PopularTrip {
     let currency: String
     let popularityScore: Int
     var isFavorite: Bool
+    /// The trip's actual stops (country/city, dates, transport, hotels/attractions/restaurants)
+    /// as returned by `GET /trips` — carried through so the detail screen can show everything,
+    /// not just the card summary.
+    let stops: [TripStopSnapshot]
 
     var durationText: String {
         durationInDays == 1 ? "1 Gün" : "\(durationInDays) Gün"

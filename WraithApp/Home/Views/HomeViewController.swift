@@ -63,7 +63,14 @@ final class HomeViewController: UIViewController {
         tableView.dataSource = self
         tableView.delegate = self
         tableView.register(PopularTripCell.self, forCellReuseIdentifier: PopularTripCell.reuseIdentifier)
+        tableView.refreshControl = refreshControl
         return tableView
+    }()
+
+    private lazy var refreshControl: UIRefreshControl = {
+        let control = UIRefreshControl()
+        control.addTarget(self, action: #selector(didPullToRefresh), for: .valueChanged)
+        return control
     }()
 
     private lazy var loadingIndicator: UIActivityIndicatorView = {
@@ -174,6 +181,12 @@ final class HomeViewController: UIViewController {
         sortButtons.forEach { $0.isSelected = ($0 === sender) }
         viewModel.selectSortOption(sender.option)
     }
+
+    @objc private func didPullToRefresh() {
+        viewModel.pullToRefresh { [weak self] in
+            self?.refreshControl.endRefreshing()
+        }
+    }
 }
 
 // MARK: - UITableViewDataSource, UITableViewDelegate
@@ -203,7 +216,8 @@ extension HomeViewController: UITableViewDataSource, UITableViewDelegate {
             reviewCount: trip.reviewCount,
             durationInDays: trip.durationInDays,
             price: trip.price,
-            currency: trip.currency
+            currency: trip.currency,
+            stops: trip.stops
         )
         let summaryViewModel = TripSummaryViewModel(browsedTripPreview: preview)
         navigationController?.pushViewController(TripSummaryViewController(viewModel: summaryViewModel), animated: true)

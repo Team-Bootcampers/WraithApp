@@ -154,7 +154,7 @@ final class TripSummaryViewController: UIViewController {
 
     // MARK: - Init
 
-    init(viewModel: TripSummaryViewModel, publishingService: TripPublishingServiceProtocol = MockTripPublishingService()) {
+    init(viewModel: TripSummaryViewModel, publishingService: TripPublishingServiceProtocol = TripPublishingService()) {
         self.viewModel = viewModel
         self.publishingService = publishingService
         super.init(nibName: nil, bundle: nil)
@@ -318,9 +318,9 @@ final class TripSummaryViewController: UIViewController {
         }
 
         if savedTrip.isPublic {
-            confirmUnpublish(tripID: savedTrip.id)
+            confirmUnpublish()
         } else {
-            presentPublishForm(tripID: savedTrip.id)
+            presentPublishForm()
         }
     }
 
@@ -346,17 +346,17 @@ final class TripSummaryViewController: UIViewController {
         publicIconButton.accessibilityLabel = isPublic ? "Herkese Açık Özelliğini Kapat" : "Herkese Aç"
     }
 
-    private func presentPublishForm(tripID: UUID) {
+    private func presentPublishForm() {
         let formViewController = PublishTripFormViewController()
         formViewController.onSubmit = { [weak self, weak formViewController] title, description in
             formViewController?.dismiss(animated: true) {
-                self?.publishTrip(id: tripID, title: title, description: description)
+                self?.publishTrip(title: title, description: description)
             }
         }
         present(UINavigationController(rootViewController: formViewController), animated: true)
     }
 
-    private func confirmUnpublish(tripID: UUID) {
+    private func confirmUnpublish() {
         let alert = UIAlertController(
             title: "Herkese Açıklığı Kapat",
             message: "Bu seyahat artık diğer kullanıcılar tarafından görüntülenemeyecek.",
@@ -364,35 +364,42 @@ final class TripSummaryViewController: UIViewController {
         )
         alert.addAction(UIAlertAction(title: "Vazgeç", style: .cancel))
         alert.addAction(UIAlertAction(title: "Kapat", style: .destructive) { [weak self] _ in
-            self?.unpublishTrip(id: tripID)
+            self?.unpublishTrip()
         })
         present(alert, animated: true)
     }
 
-    private func publishTrip(id: UUID, title: String, description: String) {
+    /// The backend only learns about a trip once `ensureBackendTripId` creates it via
+    /// `POST /trips` — this happens lazily here, the first time the user publishes, since
+    /// there's no separate "sync to backend" step earlier in the flow.
+    private func publishTrip(title: String, description: String) {
         Task { [weak self] in
             guard let self else { return }
             do {
-                try await publishingService.publishTrip(tripID: id, title: title, description: description)
+                let backendTripId = try await viewModel.ensureBackendTripId(using: publishingService)
+                try await publishingService.publishTrip(tripID: backendTripId, title: title, description: description)
                 viewModel.setPublic(true)
                 updatePublicIconAppearance()
                 showAlert(title: "Paylaşıldı", message: "Seyahatin herkese açık hale getirildi.")
             } catch {
-                showAlert(title: "Bir Sorun Oluştu", message: "Seyahat paylaşılamadı, lütfen tekrar dene.")
+                print("⚠️ TripPublishingService.publishTrip failed: \(error)")
+                showAlert(title: "Bir Sorun Oluştu", message: "Seyahat paylaşılamadı: \(error.localizedDescription)")
             }
         }
     }
 
-    private func unpublishTrip(id: UUID) {
+    private func unpublishTrip() {
         Task { [weak self] in
             guard let self else { return }
             do {
-                try await publishingService.unpublishTrip(tripID: id)
+                let backendTripId = try await viewModel.ensureBackendTripId(using: publishingService)
+                try await publishingService.unpublishTrip(tripID: backendTripId)
                 viewModel.setPublic(false)
                 updatePublicIconAppearance()
                 showAlert(title: "Kapatıldı", message: "Seyahat artık herkese açık değil.")
             } catch {
-                showAlert(title: "Bir Sorun Oluştu", message: "İşlem tamamlanamadı, lütfen tekrar dene.")
+                print("⚠️ TripPublishingService.unpublishTrip failed: \(error)")
+                showAlert(title: "Bir Sorun Oluştu", message: "İşlem tamamlanamadı: \(error.localizedDescription)")
             }
         }
     }

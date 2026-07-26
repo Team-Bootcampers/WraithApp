@@ -32,7 +32,7 @@ final class HomeViewModel {
 
     // MARK: - Init
 
-    init(service: PopularTripsServiceProtocol = MockPopularTripsService()) {
+    init(service: PopularTripsServiceProtocol = PopularTripsService()) {
         self.service = service
     }
 
@@ -40,6 +40,13 @@ final class HomeViewModel {
 
     func start() {
         refresh()
+    }
+
+    /// Pull-to-refresh: re-fetches the current query/sort from the backend without showing the
+    /// full-screen loading indicator (the refresh control's own spinner covers that), and calls
+    /// `completion` once the fetch settles so the caller can stop that spinner.
+    func pullToRefresh(completion: @escaping () -> Void) {
+        refresh(showsLoadingIndicator: false, completion: completion)
     }
 
     /// Re-sorts the already-loaded trips locally and nothing else — the data is already on
@@ -112,7 +119,7 @@ final class HomeViewModel {
         }
     }
 
-    private func refresh() {
+    private func refresh(showsLoadingIndicator: Bool = true, completion: (() -> Void)? = nil) {
         loadTask?.cancel()
         // Only notify immediately when a loading spinner actually needs to appear (first
         // load, nothing on screen yet). When refining a search with results already
@@ -120,7 +127,7 @@ final class HomeViewModel {
         // `tableView.reloadData()` — with the same, not-yet-updated list, before the real
         // one landed a moment later. That's what made each search feel like it "reloaded
         // twice" per commit.
-        isLoading = trips.isEmpty
+        isLoading = showsLoadingIndicator && trips.isEmpty
         if isLoading {
             onStateChange?()
         }
@@ -130,7 +137,10 @@ final class HomeViewModel {
 
         loadTask = Task { [weak self] in
             let trips = (try? await self?.service.fetchTrips(query: query, sortOption: sortOption)) ?? []
-            guard !Task.isCancelled, let self else { return }
+            guard !Task.isCancelled, let self else {
+                completion?()
+                return
+            }
             self.trips = trips.map { trip in
                 var trip = trip
                 trip.isFavorite = self.favoriteTripIDs.contains(trip.id)
@@ -138,6 +148,7 @@ final class HomeViewModel {
             }
             self.isLoading = false
             self.onStateChange?()
+            completion?()
         }
     }
 }

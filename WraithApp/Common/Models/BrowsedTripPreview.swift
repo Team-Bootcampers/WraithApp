@@ -20,6 +20,10 @@ struct BrowsedTripPreview: Codable {
     let durationInDays: Int
     let price: Int
     let currency: String
+    /// The trip's actual stops, carried over from `PopularTrip.stops` so the Trip Summary
+    /// screen can render full detail (country/city, dates, transport, hotels/attractions/
+    /// restaurants) for a browsed-but-unsaved public trip, not just the card summary.
+    let stops: [TripStopSnapshot]
 
     var durationText: String {
         durationInDays == 1 ? "1 Gün" : "\(durationInDays) Gün"

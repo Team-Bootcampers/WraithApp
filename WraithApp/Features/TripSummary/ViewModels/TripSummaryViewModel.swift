@@ -47,7 +47,14 @@ final class TripSummaryViewModel {
 
     var isPublic: Bool { savedTrip?.isPublic ?? false }
 
-    var stops: [TripStopSnapshot] { savedTrip?.stops ?? [] }
+    /// Saved trips carry their stops directly; a browsed-but-unsaved public trip carries them
+    /// on its `BrowsedTripPreview` instead — either way, this is the full stop list to render.
+    var stops: [TripStopSnapshot] {
+        switch source {
+        case .savedTrip(let trip): return trip.stops
+        case .browsedPreview(let preview): return preview.stops
+        }
+    }
 
     /// Prefers the AI-estimated total from `/ai/trip-planning` (the same figure the generated
     /// PDF shows) so this screen never disagrees with the PDF — falls back to the locally
@@ -88,7 +95,7 @@ final class TripSummaryViewModel {
     @discardableResult
     func saveBrowsedTrip() -> SavedTrip? {
         guard case .browsedPreview(let preview) = source else { return nil }
-        let savedTrip = SavedTrip(browsedTripPreview: preview)
+        let savedTrip = SavedTrip(stops: preview.stops, browsedTripPreview: preview)
         TripStore.shared.save(savedTrip)
         source = .savedTrip(savedTrip)
         return savedTrip
@@ -105,6 +112,7 @@ final class TripSummaryViewModel {
             stops: trip.stops,
             browsedTripPreview: trip.browsedTripPreview,
             isPublic: isPublic,
+            backendTripId: trip.backendTripId,
             tripPlanPDFFileName: trip.tripPlanPDFFileName,
             estimatedTotalCostAmount: trip.estimatedTotalCostAmount,
             estimatedTotalCostCurrency: trip.estimatedTotalCostCurrency
@@ -112,6 +120,30 @@ final class TripSummaryViewModel {
         TripStore.shared.save(updatedTrip)
         source = .savedTrip(updatedTrip)
         return updatedTrip
+    }
+
+    /// The backend only learns about a trip once it's been created via `POST /trips` — this
+    /// happens lazily, the first time the user tries to publish, and the returned id is cached
+    /// on the trip so later publish/unpublish calls (and re-publishing after edits) reuse it.
+    func ensureBackendTripId(using publishingService: TripPublishingServiceProtocol) async throws -> String {
+        guard let trip = savedTrip else { throw TripPublishingError.missingTrip }
+        if let backendTripId = trip.backendTripId { return backendTripId }
+
+        let backendTripId = try await publishingService.createTrip(trip)
+        let updatedTrip = SavedTrip(
+            id: trip.id,
+            createdAt: trip.createdAt,
+            stops: trip.stops,
+            browsedTripPreview: trip.browsedTripPreview,
+            isPublic: trip.isPublic,
+            backendTripId: backendTripId,
+            tripPlanPDFFileName: trip.tripPlanPDFFileName,
+            estimatedTotalCostAmount: trip.estimatedTotalCostAmount,
+            estimatedTotalCostCurrency: trip.estimatedTotalCostCurrency
+        )
+        TripStore.shared.save(updatedTrip)
+        source = .savedTrip(updatedTrip)
+        return backendTripId
     }
 
     /// Generates the detailed trip-plan PDF for the currently saved trip and persists the

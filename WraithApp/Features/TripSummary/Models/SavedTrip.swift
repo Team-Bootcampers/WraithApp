@@ -16,6 +16,10 @@ struct SavedTrip: Codable, Identifiable {
     let browsedTripPreview: BrowsedTripPreview?
     /// True once the trip has been made visible to other users via "Herkese Aç".
     let isPublic: Bool
+    /// The backend's `id` for this trip, set once it's been created there via `POST /trips`.
+    /// `id` above stays purely local (used for on-device storage/lookup) since it exists
+    /// before the trip is ever synced to the backend.
+    var backendTripId: String?
     /// Filename (not full path — the Documents directory can change between launches) of the
     /// detailed trip-plan PDF generated from `/ai/trip-planning`, if generation succeeded.
     var tripPlanPDFFileName: String?
@@ -30,6 +34,7 @@ struct SavedTrip: Codable, Identifiable {
         stops: [TripStopSnapshot] = [],
         browsedTripPreview: BrowsedTripPreview? = nil,
         isPublic: Bool = false,
+        backendTripId: String? = nil,
         tripPlanPDFFileName: String? = nil,
         estimatedTotalCostAmount: Double? = nil,
         estimatedTotalCostCurrency: String? = nil
@@ -39,6 +44,7 @@ struct SavedTrip: Codable, Identifiable {
         self.stops = stops
         self.browsedTripPreview = browsedTripPreview
         self.isPublic = isPublic
+        self.backendTripId = backendTripId
         self.tripPlanPDFFileName = tripPlanPDFFileName
         self.estimatedTotalCostAmount = estimatedTotalCostAmount
         self.estimatedTotalCostCurrency = estimatedTotalCostCurrency

@@ -33,7 +33,8 @@ final class RestaurantService: RestaurantServiceProtocol {
             rating: dto.rating,
             averagePricePerPerson: Int(dto.price.amount.rounded()),
             currency: dto.price.currency,
-            imageURL: dto.images.first.flatMap(URL.init(string:))
+            imageURL: dto.images.first.flatMap(URL.init(string:)),
+            address: dto.address
         )
     }
 }

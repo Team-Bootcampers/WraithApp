@@ -281,6 +281,7 @@ final class TripCreationViewController: UIViewController {
             createdAt: existingTrip?.createdAt ?? Date(),
             stops: snapshots,
             isPublic: existingTrip?.isPublic ?? false,
+            backendTripId: existingTrip?.backendTripId,
             tripPlanPDFFileName: existingTrip?.tripPlanPDFFileName,
             estimatedTotalCostAmount: existingTrip?.estimatedTotalCostAmount,
             estimatedTotalCostCurrency: existingTrip?.estimatedTotalCostCurrency

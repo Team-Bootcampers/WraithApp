@@ -14,4 +14,5 @@ struct Restaurant: Equatable, Codable {
     let averagePricePerPerson: Int
     let currency: String
     let imageURL: URL?
+    let address: String
 }

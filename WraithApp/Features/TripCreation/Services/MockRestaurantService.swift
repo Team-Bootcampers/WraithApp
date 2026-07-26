@@ -25,7 +25,8 @@ final class MockRestaurantService: RestaurantServiceProtocol {
                 rating: Self.ratings[index],
                 averagePricePerPerson: Self.averagePrices[index],
                 currency: "TL",
-                imageURL: URL(string: "https://picsum.photos/seed/\(citySlug)restaurant\(index)/300/200")
+                imageURL: URL(string: "https://picsum.photos/seed/\(citySlug)restaurant\(index)/300/200"),
+                address: "\(city) Merkez"
             )
         }
     }
