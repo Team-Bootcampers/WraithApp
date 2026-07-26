@@ -66,7 +66,7 @@ final class TripBasicsCardView: BaseCardView {
         super.init(title: "Seyahat Bilgileri", iconSystemName: "slider.horizontal.3")
         translatesAutoresizingMaskIntoConstraints = false
         setupLayout()
-        travelerCount = 2
+        travelerCountLabel.text = "\(travelerCount)"
         datePicker.date = Calendar.current.date(byAdding: .day, value: 14, to: Date()) ?? Date()
     }
 

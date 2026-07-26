@@ -84,13 +84,13 @@ final class AppCoordinator: Coordinator {
     }
 
     private enum CharacterAnalysisError: LocalizedError {
-        case notAuthenticated
+        case missingAnswers
         case emptyAnalysis
 
         var errorDescription: String? {
             switch self {
-            case .notAuthenticated:
-                return "Analiz için giriş yapmış olman gerekiyor."
+            case .missingAnswers:
+                return "Analiz için tüm soruları cevaplaman gerekiyor."
             case .emptyAnalysis:
                 return "Yapay zeka bir analiz döndürmedi. Lütfen tekrar dene."
             }
@@ -133,15 +133,17 @@ final class AppCoordinator: Coordinator {
     }
 
     /// The character-analysis text always comes from `/ai/travel-personality` — there is
-    /// deliberately no locally-generated substitute, so any failure (network, auth, empty
-    /// response) surfaces as an error instead of silently falling back to canned copy.
+    /// deliberately no locally-generated substitute, so any failure (network, empty response)
+    /// surfaces as an error instead of silently falling back to canned copy. The endpoint itself
+    /// doesn't require auth, so this runs for guests too — `token` is passed along when present
+    /// (logged-in user) but isn't required.
     private func fetchTravelIdentityResult(selectedOptions: [QuizOption], dto: OnboardingAnswersDto?) async throws -> TravelIdentityResult {
-        guard let dto, let token = UserSession.shared.idToken else {
-            throw CharacterAnalysisError.notAuthenticated
+        guard let dto else {
+            throw CharacterAnalysisError.missingAnswers
         }
 
         async let minimumDisplayDuration: Void? = try? Task.sleep(nanoseconds: 1_400_000_000)
-        async let responseTask = AIAPI.travelPersonality(answers: dto, token: token)
+        async let responseTask = AIAPI.travelPersonality(answers: dto, token: UserSession.shared.idToken)
 
         let analysis = try await responseTask.analysis
         _ = await minimumDisplayDuration

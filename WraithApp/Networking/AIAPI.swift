@@ -20,7 +20,7 @@ struct TravelPersonalityResponseDto: Decodable {
 /// character-analysis write-up.
 enum AIAPI {
 
-    static func travelPersonality(answers: OnboardingAnswersDto, token: String) async throws -> TravelPersonalityResponseDto {
+    static func travelPersonality(answers: OnboardingAnswersDto, token: String?) async throws -> TravelPersonalityResponseDto {
         try await APIClient.shared.request(
             path: "/ai/travel-personality",
             method: "POST",
