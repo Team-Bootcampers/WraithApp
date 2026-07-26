@@ -11,23 +11,14 @@ struct SavedTrip: Codable, Identifiable {
     let id: UUID
     let createdAt: Date
     let stops: [TripStopSnapshot]
-    /// Set only when this trip came from browsing a Home card rather than the Trip
-    /// Creation flow — `stops` stays empty for those, since there's no itinerary yet.
-    let browsedTripPreview: BrowsedTripPreview?
-    /// True once the trip has been made visible to other users via "Herkese Aç".
-    let isPublic: Bool
+    /// Filename (not full path — the Documents directory can change between launches) of the
+    /// detailed trip-plan PDF generated from `/ai/trip-planning`, if generation succeeded.
+    var tripPlanPDFFileName: String?
 
-    init(
-        id: UUID = UUID(),
-        createdAt: Date = Date(),
-        stops: [TripStopSnapshot] = [],
-        browsedTripPreview: BrowsedTripPreview? = nil,
-        isPublic: Bool = false
-    ) {
+    init(id: UUID = UUID(), createdAt: Date = Date(), stops: [TripStopSnapshot], tripPlanPDFFileName: String? = nil) {
         self.id = id
         self.createdAt = createdAt
         self.stops = stops
-        self.browsedTripPreview = browsedTripPreview
-        self.isPublic = isPublic
+        self.tripPlanPDFFileName = tripPlanPDFFileName
     }
 }

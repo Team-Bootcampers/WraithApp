@@ -30,7 +30,7 @@ final class AppCoordinator: Coordinator {
     func start() {
         let splashVC = SplashViewController()
         splashVC.onFinish = { [weak self] in
-            self?.showOnboardingIntro()
+            self?.routeAfterSplash()
         }
 
         window.rootViewController = splashVC
@@ -38,6 +38,17 @@ final class AppCoordinator: Coordinator {
     }
 
     // MARK: - Navigation
+
+    /// Character analysis only needs to run once per install — `TravelPersonalityStore`
+    /// persists the result on-device until the user logs out (see `UserSession.logout()`)
+    /// or the app is deleted, so a non-nil value here means onboarding can be skipped.
+    private func routeAfterSplash() {
+        if TravelPersonalityStore.current != nil {
+            showMain()
+        } else {
+            showOnboardingIntro()
+        }
+    }
 
     private func showOnboardingIntro() {
         let introVC = OnboardingIntroViewController()

@@ -62,7 +62,7 @@ final class ProfileViewController: UIViewController {
 
     private let surpriseTripCard = FeatureCardView(
         iconSystemName: "shippingbox.fill",
-        title: "Sürpriz Beni",
+        title: "Şaşırt Beni",
         subtitle: "Bütçeni söyle, destinasyonu son ana kadar gizli tutalım."
     )
 
