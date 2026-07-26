@@ -288,6 +288,7 @@ final class TripCreationViewController: UIViewController {
             id: existingTrip?.id ?? UUID(),
             createdAt: existingTrip?.createdAt ?? Date(),
             stops: snapshots,
+            isPublic: existingTrip?.isPublic ?? false,
             tripPlanPDFFileName: existingTrip?.tripPlanPDFFileName
         )
         // Save immediately so the trip isn't lost even if the detailed-plan generation below

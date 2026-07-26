@@ -56,7 +56,7 @@ final class TripSummaryViewModel {
     /// The generated trip-plan PDF's location on disk, if one was produced and the file
     /// still exists — `nil` hides the "Detaylı Gezi Planı" button.
     var tripPlanPDFURL: URL? {
-        guard let fileName = trip.tripPlanPDFFileName else { return nil }
+        guard let fileName = savedTrip?.tripPlanPDFFileName else { return nil }
         let url = TripPlanFileStore.fileURL(for: fileName)
         return FileManager.default.fileExists(atPath: url.path) ? url : nil
     }
@@ -98,7 +98,8 @@ final class TripSummaryViewModel {
             createdAt: trip.createdAt,
             stops: trip.stops,
             browsedTripPreview: trip.browsedTripPreview,
-            isPublic: isPublic
+            isPublic: isPublic,
+            tripPlanPDFFileName: trip.tripPlanPDFFileName
         )
         TripStore.shared.save(updatedTrip)
         source = .savedTrip(updatedTrip)

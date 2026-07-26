@@ -70,6 +70,34 @@ final class TripSummaryViewController: UIViewController {
         return button
     }()
 
+    private lazy var saveTripButton: UIButton = {
+        var configuration = UIButton.Configuration.filled()
+        configuration.title = "Seyahatlerime Kaydet"
+        configuration.image = UIImage(systemName: "bookmark.fill")
+        configuration.imagePadding = 8
+        configuration.baseBackgroundColor = TripAccentTheme.accent
+        configuration.baseForegroundColor = .wraithOnPrimary
+        configuration.cornerStyle = .large
+        configuration.titleTextAttributesTransformer = UIConfigurationTextAttributesTransformer { incoming in
+            var outgoing = incoming
+            outgoing.font = .systemFont(ofSize: 17, weight: .semibold)
+            return outgoing
+        }
+        let button = UIButton(configuration: configuration)
+        button.translatesAutoresizingMaskIntoConstraints = false
+        button.heightAnchor.constraint(equalToConstant: 52).isActive = true
+        button.addTarget(self, action: #selector(didTapSaveTrip), for: .touchUpInside)
+        return button
+    }()
+
+    private lazy var publicButton: UIButton = {
+        let button = UIButton(configuration: publicButtonConfiguration(isPublic: viewModel.isPublic))
+        button.translatesAutoresizingMaskIntoConstraints = false
+        button.heightAnchor.constraint(equalToConstant: 52).isActive = true
+        button.addTarget(self, action: #selector(didTapMakePublic), for: .touchUpInside)
+        return button
+    }()
+
     // MARK: - Properties
 
     private let viewModel: TripSummaryViewModel
@@ -78,8 +106,9 @@ final class TripSummaryViewController: UIViewController {
 
     // MARK: - Init
 
-    init(viewModel: TripSummaryViewModel) {
+    init(viewModel: TripSummaryViewModel, publishingService: TripPublishingServiceProtocol = MockTripPublishingService()) {
         self.viewModel = viewModel
+        self.publishingService = publishingService
         super.init(nibName: nil, bundle: nil)
     }
 
@@ -93,7 +122,9 @@ final class TripSummaryViewController: UIViewController {
         super.viewDidLoad()
         title = "Seyahat Özeti"
         view.backgroundColor = .wraithBackground
-        navigationItem.rightBarButtonItem = UIBarButtonItem(title: "Düzenle", style: .plain, target: self, action: #selector(didTapEditTrip))
+        if !viewModel.stops.isEmpty {
+            navigationItem.rightBarButtonItem = UIBarButtonItem(title: "Düzenle", style: .plain, target: self, action: #selector(didTapEditTrip))
+        }
         setupLayout()
     }
 
@@ -112,11 +143,21 @@ final class TripSummaryViewController: UIViewController {
             contentStackView.addArrangedSubview(stopCardView)
         }
 
-        contentStackView.addArrangedSubview(totalCostView)
+        if !viewModel.stops.isEmpty {
+            contentStackView.addArrangedSubview(totalCostView)
+        }
         if viewModel.tripPlanPDFURL != nil {
             contentStackView.addArrangedSubview(planPDFButton)
         }
-        contentStackView.addArrangedSubview(purchaseButton)
+        if viewModel.savedTrip != nil {
+            contentStackView.addArrangedSubview(publicButton)
+        }
+        if !viewModel.stops.isEmpty {
+            contentStackView.addArrangedSubview(purchaseButton)
+        }
+        if viewModel.canSaveBrowsedTrip {
+            contentStackView.addArrangedSubview(saveTripButton)
+        }
 
         NSLayoutConstraint.activate([
             scrollView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
@@ -135,12 +176,18 @@ final class TripSummaryViewController: UIViewController {
     // MARK: - Actions
 
     @objc private func didTapEditTrip() {
-        let editViewController = TripCreationViewController(existingTrip: viewModel.trip)
+        guard let savedTrip = viewModel.savedTrip else { return }
+        let editViewController = TripCreationViewController(existingTrip: savedTrip)
         if let navigationController {
             navigationController.pushViewController(editViewController, animated: true)
         } else {
             present(UINavigationController(rootViewController: editViewController), animated: true)
         }
+    }
+
+    @objc private func didTapViewPlan() {
+        guard let url = viewModel.tripPlanPDFURL else { return }
+        navigationController?.pushViewController(PDFViewerViewController(fileURL: url), animated: true)
     }
 
     @objc private func didTapPurchase() {
@@ -208,12 +255,59 @@ final class TripSummaryViewController: UIViewController {
         publicButton.configuration = publicButtonConfiguration(isPublic: viewModel.isPublic)
     }
 
-    @objc private func didTapPurchase() {
+    private func presentPublishForm(tripID: UUID) {
+        let formViewController = PublishTripFormViewController()
+        formViewController.onSubmit = { [weak self, weak formViewController] title, description in
+            formViewController?.dismiss(animated: true) {
+                self?.publishTrip(id: tripID, title: title, description: description)
+            }
+        }
+        present(UINavigationController(rootViewController: formViewController), animated: true)
+    }
+
+    private func confirmUnpublish(tripID: UUID) {
         let alert = UIAlertController(
-            title: "Bilet Satın Alındı",
-            message: "Seyahatiniz için biletler başarıyla satın alındı.",
+            title: "Herkese Açıklığı Kapat",
+            message: "Bu seyahat artık diğer kullanıcılar tarafından görüntülenemeyecek.",
             preferredStyle: .alert
         )
+        alert.addAction(UIAlertAction(title: "Vazgeç", style: .cancel))
+        alert.addAction(UIAlertAction(title: "Kapat", style: .destructive) { [weak self] _ in
+            self?.unpublishTrip(id: tripID)
+        })
+        present(alert, animated: true)
+    }
+
+    private func publishTrip(id: UUID, title: String, description: String) {
+        Task { [weak self] in
+            guard let self else { return }
+            do {
+                try await publishingService.publishTrip(tripID: id, title: title, description: description)
+                viewModel.setPublic(true)
+                updatePublicButtonAppearance()
+                showAlert(title: "Paylaşıldı", message: "Seyahatin herkese açık hale getirildi.")
+            } catch {
+                showAlert(title: "Bir Sorun Oluştu", message: "Seyahat paylaşılamadı, lütfen tekrar dene.")
+            }
+        }
+    }
+
+    private func unpublishTrip(id: UUID) {
+        Task { [weak self] in
+            guard let self else { return }
+            do {
+                try await publishingService.unpublishTrip(tripID: id)
+                viewModel.setPublic(false)
+                updatePublicButtonAppearance()
+                showAlert(title: "Kapatıldı", message: "Seyahat artık herkese açık değil.")
+            } catch {
+                showAlert(title: "Bir Sorun Oluştu", message: "İşlem tamamlanamadı, lütfen tekrar dene.")
+            }
+        }
+    }
+
+    private func showAlert(title: String, message: String) {
+        let alert = UIAlertController(title: title, message: message, preferredStyle: .alert)
         alert.addAction(UIAlertAction(title: "Tamam", style: .default))
         present(alert, animated: true)
     }
