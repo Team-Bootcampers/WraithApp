@@ -209,7 +209,7 @@ private final class SelectionRowView: UIView {
     }()
 
     private lazy var contentStackView: UIStackView = {
-        let stack = UIStackView(arrangedSubviews: [flagImageView, titleLabel, chevronImageView])
+        let stack = UIStackView(arrangedSubviews: [titleLabel, flagImageView, chevronImageView])
         stack.axis = .horizontal
         stack.alignment = .center
         stack.spacing = WraithSpacing.space10

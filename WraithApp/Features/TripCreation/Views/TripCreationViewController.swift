@@ -50,33 +50,24 @@ final class TripCreationViewController: UIViewController {
         return button
     }()
 
+    private lazy var planGenerationLoadingView: TripPlanGenerationLoadingView = {
+        let view = TripPlanGenerationLoadingView()
+        view.translatesAutoresizingMaskIntoConstraints = false
+        return view
+    }()
+
     private lazy var itineraryLoadingOverlayView: UIView = {
         let view = UIView()
-        view.backgroundColor = UIColor.wraithBackground.withAlphaComponent(0.92)
+        view.backgroundColor = .wraithBackground
         view.isHidden = true
         view.translatesAutoresizingMaskIntoConstraints = false
 
-        let activityIndicator = UIActivityIndicatorView(style: .large)
-        activityIndicator.color = .wraithPrimary
-        activityIndicator.startAnimating()
-        activityIndicator.translatesAutoresizingMaskIntoConstraints = false
-
-        let label = UILabel()
-        label.text = "Detaylı gezi planı hazırlanıyor..."
-        label.font = .systemFont(ofSize: 15, weight: .semibold)
-        label.textColor = .wraithOnSurface
-        label.numberOfLines = 0
-        label.textAlignment = .center
-        label.translatesAutoresizingMaskIntoConstraints = false
-
-        view.addSubview(activityIndicator)
-        view.addSubview(label)
+        view.addSubview(planGenerationLoadingView)
         NSLayoutConstraint.activate([
-            activityIndicator.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            activityIndicator.centerYAnchor.constraint(equalTo: view.centerYAnchor, constant: -20),
-            label.topAnchor.constraint(equalTo: activityIndicator.bottomAnchor, constant: WraithSpacing.space16),
-            label.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: WraithSpacing.space40),
-            label.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -WraithSpacing.space40)
+            planGenerationLoadingView.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            planGenerationLoadingView.centerYAnchor.constraint(equalTo: view.centerYAnchor),
+            planGenerationLoadingView.leadingAnchor.constraint(greaterThanOrEqualTo: view.leadingAnchor, constant: WraithSpacing.space20),
+            planGenerationLoadingView.trailingAnchor.constraint(lessThanOrEqualTo: view.trailingAnchor, constant: -WraithSpacing.space20)
         ])
         return view
     }()
@@ -159,6 +150,14 @@ final class TripCreationViewController: UIViewController {
 
     private func addStop(prefillFrom snapshot: TripStopSnapshot? = nil, animated: Bool = true) {
         let viewModel = TripCreationViewModel()
+
+        // Chain stops together: a newly added stop departs from wherever the previous stop
+        // arrived, so the user isn't re-picking a city they just selected. Skipped when
+        // restoring a saved trip — the snapshot already carries its own departure city.
+        if snapshot == nil, let previousCity = stopViewModels.last?.selectedCity {
+            viewModel.selectDepartureCity(previousCity)
+        }
+
         stopViewModels.append(viewModel)
 
         let section = makeStopSection(stopNumber: stopViewModels.count, viewModel: viewModel)
@@ -289,7 +288,9 @@ final class TripCreationViewController: UIViewController {
             createdAt: existingTrip?.createdAt ?? Date(),
             stops: snapshots,
             isPublic: existingTrip?.isPublic ?? false,
-            tripPlanPDFFileName: existingTrip?.tripPlanPDFFileName
+            tripPlanPDFFileName: existingTrip?.tripPlanPDFFileName,
+            estimatedTotalCostAmount: existingTrip?.estimatedTotalCostAmount,
+            estimatedTotalCostCurrency: existingTrip?.estimatedTotalCostCurrency
         )
         // Save immediately so the trip isn't lost even if the detailed-plan generation below
         // fails or the user leaves before it finishes.
@@ -298,13 +299,17 @@ final class TripCreationViewController: UIViewController {
         saveButton.isEnabled = false
         saveButton.alpha = 0.4
         itineraryLoadingOverlayView.isHidden = false
+        planGenerationLoadingView.startAnimating()
+        tabBarController?.tabBar.isHidden = true
 
         Task { [weak self] in
             guard let self else { return }
             var finalTrip = savedTrip
             do {
-                let fileName = try await TripPlanningService().generatePlanPDF(for: savedTrip)
-                finalTrip.tripPlanPDFFileName = fileName
+                let result = try await TripPlanningService().generatePlanPDF(for: savedTrip)
+                finalTrip.tripPlanPDFFileName = result.fileName
+                finalTrip.estimatedTotalCostAmount = result.totalEstimatedCost.amount
+                finalTrip.estimatedTotalCostCurrency = result.totalEstimatedCost.currency
                 TripStore.shared.save(finalTrip)
             } catch TripPlanningError.missingCharacterAnalysis {
                 // Expected before onboarding is complete — trip stays saved without a PDF.
@@ -313,7 +318,9 @@ final class TripCreationViewController: UIViewController {
                 presentPlanGenerationErrorAlert()
             }
 
+            planGenerationLoadingView.stopAnimating()
             itineraryLoadingOverlayView.isHidden = true
+            tabBarController?.tabBar.isHidden = false
             saveButton.isEnabled = true
             saveButton.alpha = 1
 

@@ -19,6 +19,10 @@ struct SavedTrip: Codable, Identifiable {
     /// Filename (not full path — the Documents directory can change between launches) of the
     /// detailed trip-plan PDF generated from `/ai/trip-planning`, if generation succeeded.
     var tripPlanPDFFileName: String?
+    /// The same `totalEstimatedCost` the generated PDF shows — kept alongside it so the
+    /// Trip Summary screen never displays a different total than the PDF does.
+    var estimatedTotalCostAmount: Double?
+    var estimatedTotalCostCurrency: String?
 
     init(
         id: UUID = UUID(),
@@ -26,7 +30,9 @@ struct SavedTrip: Codable, Identifiable {
         stops: [TripStopSnapshot] = [],
         browsedTripPreview: BrowsedTripPreview? = nil,
         isPublic: Bool = false,
-        tripPlanPDFFileName: String? = nil
+        tripPlanPDFFileName: String? = nil,
+        estimatedTotalCostAmount: Double? = nil,
+        estimatedTotalCostCurrency: String? = nil
     ) {
         self.id = id
         self.createdAt = createdAt
@@ -34,5 +40,7 @@ struct SavedTrip: Codable, Identifiable {
         self.browsedTripPreview = browsedTripPreview
         self.isPublic = isPublic
         self.tripPlanPDFFileName = tripPlanPDFFileName
+        self.estimatedTotalCostAmount = estimatedTotalCostAmount
+        self.estimatedTotalCostCurrency = estimatedTotalCostCurrency
     }
 }

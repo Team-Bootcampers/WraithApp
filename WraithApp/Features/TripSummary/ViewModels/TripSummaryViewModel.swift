@@ -49,8 +49,14 @@ final class TripSummaryViewModel {
 
     var stops: [TripStopSnapshot] { savedTrip?.stops ?? [] }
 
+    /// Prefers the AI-estimated total from `/ai/trip-planning` (the same figure the generated
+    /// PDF shows) so this screen never disagrees with the PDF — falls back to the locally
+    /// computed sum only when no plan has been generated yet.
     var totalCost: Int {
-        stops.reduce(0) { $0 + totalCost(for: $1) }
+        if let amount = savedTrip?.estimatedTotalCostAmount {
+            return Int(amount.rounded())
+        }
+        return stops.reduce(0) { $0 + totalCost(for: $1) }
     }
 
     /// The generated trip-plan PDF's location on disk, if one was produced and the file
@@ -99,7 +105,9 @@ final class TripSummaryViewModel {
             stops: trip.stops,
             browsedTripPreview: trip.browsedTripPreview,
             isPublic: isPublic,
-            tripPlanPDFFileName: trip.tripPlanPDFFileName
+            tripPlanPDFFileName: trip.tripPlanPDFFileName,
+            estimatedTotalCostAmount: trip.estimatedTotalCostAmount,
+            estimatedTotalCostCurrency: trip.estimatedTotalCostCurrency
         )
         TripStore.shared.save(updatedTrip)
         source = .savedTrip(updatedTrip)

@@ -17,9 +17,14 @@ enum TripPlanningError: Error, LocalizedError {
 
 /// Calls `/ai/trip-planning` with the trip's parameters and the user's character analysis,
 /// then renders the response into a themed PDF stored in the Documents directory.
+struct TripPlanGenerationResult {
+    let fileName: String
+    let totalEstimatedCost: TripPlanningCostDto
+}
+
 final class TripPlanningService {
 
-    func generatePlanPDF(for trip: SavedTrip) async throws -> String {
+    func generatePlanPDF(for trip: SavedTrip) async throws -> TripPlanGenerationResult {
         guard let characterAnalysis = TravelPersonalityStore.current else {
             throw TripPlanningError.missingCharacterAnalysis
         }
@@ -45,7 +50,7 @@ final class TripPlanningService {
         let pdfData = TripPlanPDFGenerator().renderPDF(response: response, travelerCount: travelerCount)
         let fileName = "trip-\(trip.id.uuidString).pdf"
         try pdfData.write(to: TripPlanFileStore.fileURL(for: fileName))
-        return fileName
+        return TripPlanGenerationResult(fileName: fileName, totalEstimatedCost: response.totalEstimatedCost)
     }
 
     private static func makeStopDto(_ stop: TripStopSnapshot) -> TripPlanningStopDto {

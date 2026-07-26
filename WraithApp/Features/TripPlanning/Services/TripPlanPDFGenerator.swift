@@ -54,7 +54,6 @@ final class TripPlanPDFGenerator {
 
         let headerRect = CGRect(x: 0, y: 0, width: Metric.pageSize.width, height: 300)
         drawGradient(in: headerRect, colors: [Palette.primary, Palette.primaryDark])
-        drawIcon(systemName: "airplane", tint: .white.withAlphaComponent(0.12), in: CGRect(x: Metric.pageSize.width - 210, y: -20, width: 240, height: 240), pointSize: 210)
 
         draw(text: "W R A I T H", font: .systemFont(ofSize: 13, weight: .bold), color: .white.withAlphaComponent(0.85), rect: CGRect(x: Metric.margin, y: 40, width: contentWidth, height: 18))
         draw(text: "DETAYLI GEZİ PLANI", font: .systemFont(ofSize: 11, weight: .semibold), color: Palette.secondary, rect: CGRect(x: Metric.margin, y: 60, width: contentWidth, height: 16))
