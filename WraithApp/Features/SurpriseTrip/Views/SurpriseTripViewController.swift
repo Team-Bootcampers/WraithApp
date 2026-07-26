@@ -31,7 +31,7 @@ final class SurpriseTripViewController: UIViewController {
     }()
 
     private lazy var budgetField = WraithTextField(
-        placeholder: "Kişi başı bütçen (TL) — opsiyonel",
+        placeholder: "Kişi başı bütçen (TL)",
         keyboardType: .numberPad
     )
 
@@ -143,21 +143,39 @@ final class SurpriseTripViewController: UIViewController {
 
     @objc private func didTapPrepare() {
         view.endEditing(true)
+
+        guard let budgetPerPerson = Int(budgetField.text ?? "") else {
+            showAlert(title: "Bütçe Gerekli", message: "Sürprizi hazırlamak için kişi başı bütçeni girmelisin.")
+            return
+        }
+
         prepareButton.setLoading(true)
         planCardView.isHidden = true
         saveButton.isHidden = true
 
         Task { [weak self] in
             guard let self else { return }
-            let plan = await self.viewModel.prepareSurprise(
-                startDate: self.basicsCardView.startDate,
-                travelerCount: self.basicsCardView.travelerCount,
-                budgetPerPerson: Int(self.budgetField.text ?? "")
-            )
-            self.prepareButton.setLoading(false)
-            guard let plan else { return }
-            self.showMystery(plan)
+            do {
+                let plan = try await self.viewModel.prepareSurprise(
+                    startDate: self.basicsCardView.startDate,
+                    travelerCount: self.basicsCardView.travelerCount,
+                    budgetPerPerson: budgetPerPerson
+                )
+                self.prepareButton.setLoading(false)
+                self.showMystery(plan)
+            } catch {
+                self.prepareButton.setLoading(false)
+                print("⚠️ SurpriseTripViewModel.prepareSurprise failed: \(error)")
+                let message = (error as? SurpriseTripError)?.errorDescription ?? "Sürpriz hazırlanamadı: \(error.localizedDescription)"
+                self.showAlert(title: "Bir Sorun Oluştu", message: message)
+            }
         }
+    }
+
+    private func showAlert(title: String, message: String) {
+        let alert = UIAlertController(title: title, message: message, preferredStyle: .alert)
+        alert.addAction(UIAlertAction(title: "Tamam", style: .default))
+        present(alert, animated: true)
     }
 
     @objc private func didTapReveal() {

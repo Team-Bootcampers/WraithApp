@@ -342,7 +342,7 @@ final class TripSummaryViewController: UIViewController {
         let isPublic = viewModel.isPublic
         // Same tint as `editIconButton` regardless of state — the icon shape alone (not a
         // color change) communicates public vs. private here.
-        publicIconButton.setImage(UIImage(systemName: isPublic ? "globe.slash" : "globe"), for: .normal)
+        publicIconButton.setImage(UIImage(systemName: isPublic ? "globe.fill" : "globe"), for: .normal)
         publicIconButton.accessibilityLabel = isPublic ? "Herkese Açık Özelliğini Kapat" : "Herkese Aç"
     }
 
