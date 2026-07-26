@@ -97,6 +97,18 @@ final class POIMiniCardView: UIView, UIGestureRecognizerDelegate {
         return label
     }()
 
+    /// Opt-in caption shown under the price for an already-purchased hotel (see
+    /// `POIDisplayItem.confirmationText`) — hidden for every other use of this card.
+    private lazy var confirmationLabel: UILabel = {
+        let label = UILabel()
+        label.font = .systemFont(ofSize: 12, weight: .semibold)
+        label.textColor = .systemGreen
+        label.numberOfLines = 1
+        label.isHidden = true
+        label.translatesAutoresizingMaskIntoConstraints = false
+        return label
+    }()
+
     /// Hidden by default — only a caller that opts in (currently: the hotel recap in Trip
     /// Summary) shows this, via `setActionButton(title:)`. Every other place this card is
     /// used (Trip Creation's selection carousels, the grid, other recap rows) leaves it out.
@@ -120,7 +132,7 @@ final class POIMiniCardView: UIView, UIGestureRecognizerDelegate {
     }()
 
     private lazy var textStackView: UIStackView = {
-        let stack = UIStackView(arrangedSubviews: [nameLabel, ratingStackView, priceLabel, actionButton])
+        let stack = UIStackView(arrangedSubviews: [nameLabel, ratingStackView, priceLabel, confirmationLabel, actionButton])
         stack.axis = .vertical
         stack.spacing = WraithSpacing.space6
         stack.alignment = .fill
@@ -151,6 +163,10 @@ final class POIMiniCardView: UIView, UIGestureRecognizerDelegate {
     var onTap: (() -> Void)?
     var onActionTap: (() -> Void)?
     private var isCurrentlySelected = false
+    /// True while the current item carries `confirmationText` — swaps the selection border
+    /// from the normal accent color to green, since this card represents a completed
+    /// purchase rather than an in-progress pick.
+    private var isConfirmed = false
     private let photoHeight: CGFloat
     private var baseBackgroundColor: UIColor = .wraithSurface {
         didSet {
@@ -280,22 +296,29 @@ final class POIMiniCardView: UIView, UIGestureRecognizerDelegate {
         priceLabel.text = item.priceText
         priceLabel.isHidden = item.priceText == nil
         photoImageView.setImage(from: item.imageURL)
+        confirmationLabel.text = item.confirmationText
+        confirmationLabel.isHidden = item.confirmationText == nil
 
         let didChange = isCurrentlySelected != item.isSelected
         isCurrentlySelected = item.isSelected
+        isConfirmed = item.confirmationText != nil
+        selectionBadgeImageView.tintColor = isConfirmed ? .systemGreen : .wraithSelection
         setSelected(item.isSelected, animated: didChange)
     }
 
     // MARK: - Selection
 
     private func setSelected(_ selected: Bool, animated: Bool) {
+        let selectionColor: UIColor = isConfirmed ? .systemGreen : .wraithSelection
+        let selectionBackground: UIColor = isConfirmed ? UIColor.systemGreen.withAlphaComponent(0.12) : TripAccentTheme.selectionSoftBackground
+
         guard animated else {
             selectionBadgeHaloView.isHidden = !selected
             selectionBadgeHaloView.alpha = selected ? 1 : 0
             selectionBadgeHaloView.transform = .identity
             containerView.layer.borderWidth = selected ? WraithBorderWidth.selected : WraithBorderWidth.hairline
-            containerView.layer.borderColor = (selected ? UIColor.wraithSelection : .wraithOutlineVariant).cgColor
-            containerView.backgroundColor = selected ? TripAccentTheme.selectionSoftBackground : baseBackgroundColor
+            containerView.layer.borderColor = (selected ? selectionColor : .wraithOutlineVariant).cgColor
+            containerView.backgroundColor = selected ? selectionBackground : baseBackgroundColor
             return
         }
 
@@ -325,8 +348,8 @@ final class POIMiniCardView: UIView, UIGestureRecognizerDelegate {
             options: [.allowUserInteraction, .beginFromCurrentState]
         ) {
             self.containerView.layer.borderWidth = selected ? WraithBorderWidth.selected : WraithBorderWidth.hairline
-            self.containerView.layer.borderColor = (selected ? UIColor.wraithSelection : .wraithOutlineVariant).cgColor
-            self.containerView.backgroundColor = selected ? TripAccentTheme.selectionSoftBackground : self.baseBackgroundColor
+            self.containerView.layer.borderColor = (selected ? selectionColor : .wraithOutlineVariant).cgColor
+            self.containerView.backgroundColor = selected ? selectionBackground : self.baseBackgroundColor
             self.selectionBadgeHaloView.alpha = selected ? 1 : 0
             self.selectionBadgeHaloView.transform = selected ? .identity : CGAffineTransform(scaleX: 0.4, y: 0.4)
         } completion: { _ in

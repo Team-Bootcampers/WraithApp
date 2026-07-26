@@ -17,7 +17,7 @@ struct TripStopSnapshot: Codable {
     let endDate: Date?
     let transportType: TransportType
     let hotels: [Hotel]
-    let selectedHotelIDs: Set<String>
+    var selectedHotelIDs: Set<String>
     let places: [Place]
     let selectedPlaceIDs: Set<String>
     let restaurants: [Restaurant]

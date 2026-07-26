@@ -47,6 +47,10 @@ final class TripSummaryViewModel {
 
     var isPublic: Bool { savedTrip?.isPublic ?? false }
 
+    var isPurchased: Bool { savedTrip?.isPurchased ?? false }
+
+    var hasPurchasedPlanAddOn: Bool { savedTrip?.hasPurchasedPlanAddOn ?? false }
+
     /// Saved trips carry their stops directly; a browsed-but-unsaved public trip carries them
     /// on its `BrowsedTripPreview` instead — either way, this is the full stop list to render.
     var stops: [TripStopSnapshot] {
@@ -105,44 +109,66 @@ final class TripSummaryViewModel {
     /// does nothing) if this screen isn't backed by a persisted trip yet.
     @discardableResult
     func setPublic(_ isPublic: Bool) -> SavedTrip? {
-        guard let trip = savedTrip else { return nil }
-        let updatedTrip = SavedTrip(
-            id: trip.id,
-            createdAt: trip.createdAt,
-            stops: trip.stops,
-            browsedTripPreview: trip.browsedTripPreview,
-            isPublic: isPublic,
-            backendTripId: trip.backendTripId,
-            tripPlanPDFFileName: trip.tripPlanPDFFileName,
-            estimatedTotalCostAmount: trip.estimatedTotalCostAmount,
-            estimatedTotalCostCurrency: trip.estimatedTotalCostCurrency
-        )
-        TripStore.shared.save(updatedTrip)
-        source = .savedTrip(updatedTrip)
-        return updatedTrip
+        guard var trip = savedTrip else { return nil }
+        trip.isPublic = isPublic
+        TripStore.shared.save(trip)
+        source = .savedTrip(trip)
+        return trip
+    }
+
+    /// Locks in whichever hotel is currently selected for one stop — Trip Summary only ever
+    /// allows a single choice per stop, unlike Trip Creation's multi-select.
+    @discardableResult
+    func selectHotel(_ hotelID: String, forStopNumber stopNumber: Int) -> SavedTrip? {
+        guard var trip = savedTrip, let index = trip.stops.firstIndex(where: { $0.stopNumber == stopNumber }) else { return nil }
+        trip.stops[index].selectedHotelIDs = [hotelID]
+        TripStore.shared.save(trip)
+        source = .savedTrip(trip)
+        return trip
+    }
+
+    /// Finalizes checkout: marks the trip purchased (each stop's currently-selected hotel
+    /// becomes "the" hotel from here on) and, if chosen, the 59.90 TL detailed-plan add-on.
+    @discardableResult
+    func completePurchase(includingPlanAddOn: Bool) -> SavedTrip? {
+        guard var trip = savedTrip else { return nil }
+        // Locks each stop to whichever hotel `primaryHotel(for:)` currently resolves to, even
+        // for stops the traveler never actually tapped a hotel card on — otherwise a stop
+        // left with Trip Creation's original multi-selection would purchase every one of
+        // those hotels instead of just the one shown/costed on this screen.
+        for index in trip.stops.indices {
+            guard let hotel = primaryHotel(for: trip.stops[index]) else { continue }
+            trip.stops[index].selectedHotelIDs = [hotel.id]
+        }
+        trip.isPurchased = true
+        if includingPlanAddOn { trip.hasPurchasedPlanAddOn = true }
+        TripStore.shared.save(trip)
+        source = .savedTrip(trip)
+        return trip
+    }
+
+    /// Buys the detailed-plan add-on after the fact (the trip was already purchased without
+    /// it) — same effect as opting in during checkout.
+    @discardableResult
+    func purchasePlanAddOn() -> SavedTrip? {
+        guard var trip = savedTrip else { return nil }
+        trip.hasPurchasedPlanAddOn = true
+        TripStore.shared.save(trip)
+        source = .savedTrip(trip)
+        return trip
     }
 
     /// The backend only learns about a trip once it's been created via `POST /trips` — this
     /// happens lazily, the first time the user tries to publish, and the returned id is cached
     /// on the trip so later publish/unpublish calls (and re-publishing after edits) reuse it.
     func ensureBackendTripId(using publishingService: TripPublishingServiceProtocol) async throws -> String {
-        guard let trip = savedTrip else { throw TripPublishingError.missingTrip }
+        guard var trip = savedTrip else { throw TripPublishingError.missingTrip }
         if let backendTripId = trip.backendTripId { return backendTripId }
 
         let backendTripId = try await publishingService.createTrip(trip)
-        let updatedTrip = SavedTrip(
-            id: trip.id,
-            createdAt: trip.createdAt,
-            stops: trip.stops,
-            browsedTripPreview: trip.browsedTripPreview,
-            isPublic: trip.isPublic,
-            backendTripId: backendTripId,
-            tripPlanPDFFileName: trip.tripPlanPDFFileName,
-            estimatedTotalCostAmount: trip.estimatedTotalCostAmount,
-            estimatedTotalCostCurrency: trip.estimatedTotalCostCurrency
-        )
-        TripStore.shared.save(updatedTrip)
-        source = .savedTrip(updatedTrip)
+        trip.backendTripId = backendTripId
+        TripStore.shared.save(trip)
+        source = .savedTrip(trip)
         return backendTripId
     }
 
@@ -162,34 +188,36 @@ final class TripSummaryViewModel {
 
     // MARK: - Cost Calculation
 
+    /// The ticket's mock fare plus the chosen hotel's full stay total — deliberately just
+    /// these two (not places/restaurants), matching what's actually shown/purchased on this
+    /// screen: a flight and a room, nothing per-activity is billed here.
     func totalCost(for stop: TripStopSnapshot) -> Int {
-        hotelCost(for: stop) + placesCost(for: stop) + restaurantsCost(for: stop)
+        ticketCost(for: stop) + hotelCost(for: stop)
+    }
+
+    /// A flat mock fare (e.g. 2250 TL for a flight) — not multiplied by traveler count, same
+    /// as the hotel's nightly rate isn't either.
+    func ticketCost(for stop: TripStopSnapshot) -> Int {
+        stop.transportType.mockMinimumTicketPrice
     }
 
     func hotelCost(for stop: TripStopSnapshot) -> Int {
         let nights = nightsCount(for: stop)
-        guard nights > 0 else { return 0 }
+        guard nights > 0, let hotel = primaryHotel(for: stop) else { return 0 }
+        return hotel.pricePerNight * nights
+    }
 
+    /// Trip Summary only ever bills for a single hotel per stop, even though `selectedHotelIDs`
+    /// can still hold more than one entry left over from Trip Creation's multi-select — the
+    /// cheapest of whatever's selected (deterministic, unlike `Set.first`) is "the" hotel until
+    /// the traveler taps a different one. Falls back to the cheapest option overall when
+    /// nothing's selected yet.
+    func primaryHotel(for stop: TripStopSnapshot) -> Hotel? {
         let selectedHotels = stop.hotels.filter { stop.selectedHotelIDs.contains($0.id) }
-        if !selectedHotels.isEmpty {
-            let nightlyTotal = selectedHotels.reduce(0) { $0 + $1.pricePerNight }
-            return nightlyTotal * nights
+        if let cheapestSelected = selectedHotels.min(by: { $0.pricePerNight < $1.pricePerNight }) {
+            return cheapestSelected
         }
-
-        guard let cheapestHotel = stop.hotels.min(by: { $0.pricePerNight < $1.pricePerNight }) else { return 0 }
-        return cheapestHotel.pricePerNight * nights
-    }
-
-    func placesCost(for stop: TripStopSnapshot) -> Int {
-        let selectedPlaces = stop.places.filter { stop.selectedPlaceIDs.contains($0.id) }
-        let entryFeeTotal = selectedPlaces.reduce(0) { $0 + $1.entryFee }
-        return entryFeeTotal * stop.travelerCount
-    }
-
-    func restaurantsCost(for stop: TripStopSnapshot) -> Int {
-        let selectedRestaurants = stop.restaurants.filter { stop.selectedRestaurantIDs.contains($0.id) }
-        let averageTotal = selectedRestaurants.reduce(0) { $0 + $1.averagePricePerPerson }
-        return averageTotal * stop.travelerCount
+        return stop.hotels.min(by: { $0.pricePerNight < $1.pricePerNight })
     }
 
     func nightsCount(for stop: TripStopSnapshot) -> Int {

@@ -10,12 +10,13 @@ import Foundation
 struct SavedTrip: Codable, Identifiable {
     let id: UUID
     let createdAt: Date
-    let stops: [TripStopSnapshot]
+    var stops: [TripStopSnapshot]
     /// Set only when this trip came from browsing a Home card rather than the Trip
-    /// Creation flow — `stops` stays empty for those, since there's no itinerary yet.
+    /// Creation flow — `stops` is still populated for these (Home cards carry their own
+    /// itinerary), just alongside the extra marketing info (image, rating, price...).
     let browsedTripPreview: BrowsedTripPreview?
     /// True once the trip has been made visible to other users via "Herkese Aç".
-    let isPublic: Bool
+    var isPublic: Bool
     /// The backend's `id` for this trip, set once it's been created there via `POST /trips`.
     /// `id` above stays purely local (used for on-device storage/lookup) since it exists
     /// before the trip is ever synced to the backend.
@@ -27,6 +28,13 @@ struct SavedTrip: Codable, Identifiable {
     /// Trip Summary screen never displays a different total than the PDF does.
     var estimatedTotalCostAmount: Double?
     var estimatedTotalCostCurrency: String?
+    /// True once "Öde ve Tamamla" has been confirmed — locks each stop's hotel choice in and
+    /// switches Trip Summary from "pick your options" to "here's what you bought".
+    var isPurchased: Bool
+    /// True once the 59.90 TL detailed-plan add-on has been bought, either during checkout or
+    /// afterward — gates whether the bottom button generates/opens the plan for free or still
+    /// asks for payment.
+    var hasPurchasedPlanAddOn: Bool
 
     init(
         id: UUID = UUID(),
@@ -37,7 +45,9 @@ struct SavedTrip: Codable, Identifiable {
         backendTripId: String? = nil,
         tripPlanPDFFileName: String? = nil,
         estimatedTotalCostAmount: Double? = nil,
-        estimatedTotalCostCurrency: String? = nil
+        estimatedTotalCostCurrency: String? = nil,
+        isPurchased: Bool = false,
+        hasPurchasedPlanAddOn: Bool = false
     ) {
         self.id = id
         self.createdAt = createdAt
@@ -48,5 +58,7 @@ struct SavedTrip: Codable, Identifiable {
         self.tripPlanPDFFileName = tripPlanPDFFileName
         self.estimatedTotalCostAmount = estimatedTotalCostAmount
         self.estimatedTotalCostCurrency = estimatedTotalCostCurrency
+        self.isPurchased = isPurchased
+        self.hasPurchasedPlanAddOn = hasPurchasedPlanAddOn
     }
 }

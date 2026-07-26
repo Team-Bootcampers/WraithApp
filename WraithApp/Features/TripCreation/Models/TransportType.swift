@@ -35,4 +35,24 @@ enum TransportType: String, CaseIterable, Equatable, Codable {
         case .car: return "car.fill"
         }
     }
+
+    /// Mock starting ticket price shown in Trip Summary and folded into "Bu Durağın
+    /// Maliyeti" — there's no real fare API behind this yet.
+    var mockMinimumTicketPrice: Int {
+        switch self {
+        case .airplane: return 2250
+        case .bus: return 850
+        case .car: return 450
+        }
+    }
+
+    /// Shown in place of the "Bilet Seç" row once the trip is purchased, standing in for
+    /// which carrier the (mock) ticket was booked with.
+    var purchasedCarrierName: String {
+        switch self {
+        case .airplane: return "THY"
+        case .bus: return "Metro Turizm"
+        case .car: return "Sixt Rent A Car"
+        }
+    }
 }

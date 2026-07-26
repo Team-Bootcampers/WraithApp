@@ -34,10 +34,11 @@ final class TripSummaryViewController: UIViewController {
         return view
     }()
 
-    private lazy var planPDFButton: UIButton = {
+    /// Single button whose title/icon/action are reconfigured by `configurePlanButton()`
+    /// depending on state (buy the add-on / generate / view) — only ever shown once the trip
+    /// is purchased at all, per `rebuildContent()`.
+    private lazy var planButton: UIButton = {
         var configuration = UIButton.Configuration.filled()
-        configuration.title = "Detaylı Gezi Planı"
-        configuration.image = UIImage(systemName: "doc.text.fill")
         configuration.imagePadding = 8
         configuration.baseBackgroundColor = .wraithSecondary
         configuration.baseForegroundColor = .wraithOnSecondary
@@ -50,27 +51,7 @@ final class TripSummaryViewController: UIViewController {
         let button = UIButton(configuration: configuration)
         button.translatesAutoresizingMaskIntoConstraints = false
         button.heightAnchor.constraint(equalToConstant: 52).isActive = true
-        button.addTarget(self, action: #selector(didTapViewPlan), for: .touchUpInside)
-        return button
-    }()
-
-    private lazy var generatePlanButton: UIButton = {
-        var configuration = UIButton.Configuration.filled()
-        configuration.title = "Detaylı Gezi Planı Oluştur"
-        configuration.image = UIImage(systemName: "sparkles")
-        configuration.imagePadding = 8
-        configuration.baseBackgroundColor = .wraithSecondary
-        configuration.baseForegroundColor = .wraithOnSecondary
-        configuration.cornerStyle = .large
-        configuration.titleTextAttributesTransformer = UIConfigurationTextAttributesTransformer { incoming in
-            var outgoing = incoming
-            outgoing.font = .systemFont(ofSize: 17, weight: .semibold)
-            return outgoing
-        }
-        let button = UIButton(configuration: configuration)
-        button.translatesAutoresizingMaskIntoConstraints = false
-        button.heightAnchor.constraint(equalToConstant: 52).isActive = true
-        button.addTarget(self, action: #selector(didTapGeneratePlan), for: .touchUpInside)
+        button.addTarget(self, action: #selector(didTapPlanButton), for: .touchUpInside)
         return button
     }()
 
@@ -151,6 +132,11 @@ final class TripSummaryViewController: UIViewController {
     private let viewModel: TripSummaryViewModel
     private let publishingService: TripPublishingServiceProtocol
     private var authCoordinator: AuthCoordinator?
+    /// Mirrors `viewModel.stops` (same order/count) so a hotel-selection tap can update just
+    /// the one affected card in place instead of rebuilding the whole screen.
+    private var stopCardViews: [TripStopSummaryCardView] = []
+
+    private static let planAddOnPriceText = "59,90 TL"
 
     // MARK: - Init
 
@@ -171,42 +157,18 @@ final class TripSummaryViewController: UIViewController {
         title = "Seyahat Özeti"
         view.backgroundColor = .wraithBackground
         updateNavigationBarItems()
-        setupLayout()
+        setupScaffold()
+        rebuildContent()
     }
 
     // MARK: - Setup
 
-    private func setupLayout() {
+    /// One-time layout: the scroll view, its content stack, and the plan-generation overlay.
+    /// `rebuildContent()` only ever touches what's arranged *inside* `contentStackView`.
+    private func setupScaffold() {
         view.addSubview(scrollView)
         view.addSubview(planGenerationOverlayView)
         scrollView.addSubview(contentStackView)
-
-        contentStackView.addArrangedSubview(heroView)
-
-        for stop in viewModel.stops {
-            let nights = viewModel.nightsCount(for: stop)
-            let cost = viewModel.totalCost(for: stop)
-            let stopCardView = TripStopSummaryCardView(stop: stop, nights: nights, cost: cost)
-            stopCardView.onBuyTicketTap = { [weak self] in
-                self?.showAlert(title: "Bilet Alındı", message: "Biletin başarıyla satın alındı.")
-            }
-            stopCardView.onReserveHotelTap = { [weak self] in
-                self?.showAlert(title: "Rezervasyon Yapıldı", message: "Otel rezervasyonun başarıyla tamamlandı.")
-            }
-            contentStackView.addArrangedSubview(stopCardView)
-        }
-
-        if !viewModel.stops.isEmpty {
-            contentStackView.addArrangedSubview(totalCostView)
-        }
-        if viewModel.tripPlanPDFURL != nil {
-            contentStackView.addArrangedSubview(planPDFButton)
-        } else if viewModel.savedTrip != nil {
-            contentStackView.addArrangedSubview(generatePlanButton)
-        }
-        if viewModel.canSaveBrowsedTrip {
-            contentStackView.addArrangedSubview(saveTripButton)
-        }
 
         NSLayoutConstraint.activate([
             scrollView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
@@ -225,6 +187,58 @@ final class TripSummaryViewController: UIViewController {
             planGenerationOverlayView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             planGenerationOverlayView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
         ])
+    }
+
+    /// Repopulates `contentStackView` from the current `viewModel` state — called on first
+    /// load and again any time purchase state changes (hotel choices lock in, the bottom
+    /// button's meaning changes, etc.). Cheap enough for this screen's size to just rebuild
+    /// rather than track every structural diff by hand.
+    private func rebuildContent() {
+        contentStackView.arrangedSubviews.forEach {
+            contentStackView.removeArrangedSubview($0)
+            $0.removeFromSuperview()
+        }
+        stopCardViews.removeAll()
+
+        contentStackView.addArrangedSubview(heroView)
+
+        for stop in viewModel.stops {
+            let stopCardView = makeStopCardView(for: stop)
+            stopCardViews.append(stopCardView)
+            contentStackView.addArrangedSubview(stopCardView)
+        }
+
+        // Once purchased there's nothing left to pay for, so the card asking for payment is
+        // removed outright rather than shown disabled — the ticket/hotel rows themselves now
+        // carry the "already bought" indication.
+        if !viewModel.stops.isEmpty && !viewModel.isPurchased {
+            totalCostView.updateAmount(viewModel.totalCost)
+            contentStackView.addArrangedSubview(totalCostView)
+        }
+
+        // Hidden entirely until the trip is actually purchased — no free detailed plan before
+        // checkout, and no "buy the add-on" upsell shown too early either.
+        if viewModel.isPurchased {
+            configurePlanButton()
+            contentStackView.addArrangedSubview(planButton)
+        }
+
+        if viewModel.canSaveBrowsedTrip {
+            contentStackView.addArrangedSubview(saveTripButton)
+        }
+    }
+
+    private func makeStopCardView(for stop: TripStopSnapshot) -> TripStopSummaryCardView {
+        let nights = viewModel.nightsCount(for: stop)
+        let cost = viewModel.totalCost(for: stop)
+        let stopCardView = TripStopSummaryCardView(stop: stop, nights: nights, cost: cost, isPurchased: viewModel.isPurchased)
+        stopCardView.onSelectTicketTap = { [weak self] in
+            self?.showAlert(title: "Bilet Seçildi", message: "Bilet seçimin kaydedildi — ödeme sırasında dahil edilecek.")
+        }
+        stopCardView.onHotelSelected = { [weak self] hotelID in
+            self?.didSelectHotel(hotelID, forStopNumber: stop.stopNumber)
+        }
+        return stopCardView
     }
 
     /// Both actions moved from full-width buttons in the content to icon-only bar items —
@@ -247,6 +261,19 @@ final class TripSummaryViewController: UIViewController {
             : UIBarButtonItem(customView: navigationBarActionsStackView)
     }
 
+    private func configurePlanButton() {
+        if viewModel.tripPlanPDFURL != nil {
+            planButton.configuration?.title = "Detaylı Gezi Planı"
+            planButton.configuration?.image = UIImage(systemName: "doc.text.fill")
+        } else if viewModel.hasPurchasedPlanAddOn {
+            planButton.configuration?.title = "Detaylı Gezi Planı Oluştur"
+            planButton.configuration?.image = UIImage(systemName: "sparkles")
+        } else {
+            planButton.configuration?.title = "Detaylı Gezi Planı — \(Self.planAddOnPriceText) Satın Al"
+            planButton.configuration?.image = UIImage(systemName: "lock.fill")
+        }
+    }
+
     // MARK: - Actions
 
     @objc private func didTapEditTrip() {
@@ -264,7 +291,23 @@ final class TripSummaryViewController: UIViewController {
         navigationController?.pushViewController(PDFViewerViewController(fileURL: url), animated: true)
     }
 
-    @objc private func didTapGeneratePlan() {
+    @objc private func didTapPlanButton() {
+        if viewModel.tripPlanPDFURL != nil {
+            didTapViewPlan()
+        } else if viewModel.hasPurchasedPlanAddOn {
+            // The add-on is already bought (whether at checkout or on a previous tap here) —
+            // this tap is the traveler actually asking for the plan, so generate now.
+            generateAndShowPlan()
+        } else {
+            // First tap on the "59,90 TL Satın Al" state only buys the add-on and flips the
+            // button to "Oluştur" — the calculation itself waits for the traveler to tap
+            // again, rather than firing automatically the moment payment succeeds.
+            guard viewModel.purchasePlanAddOn() != nil else { return }
+            configurePlanButton()
+        }
+    }
+
+    private func generateAndShowPlan() {
         planGenerationOverlayView.isHidden = false
         planGenerationLoadingView.startAnimating()
 
@@ -273,13 +316,9 @@ final class TripSummaryViewController: UIViewController {
             do {
                 try await viewModel.generateDetailedPlan()
                 totalCostView.updateAmount(viewModel.totalCost)
-                if let index = contentStackView.arrangedSubviews.firstIndex(of: generatePlanButton) {
-                    contentStackView.removeArrangedSubview(generatePlanButton)
-                    generatePlanButton.removeFromSuperview()
-                    contentStackView.insertArrangedSubview(planPDFButton, at: index)
-                }
+                configurePlanButton()
                 // The traveler just asked for this exact plan — show it immediately instead
-                // of making them tap "Detaylı Gezi Planı" again to see what was generated.
+                // of making them tap the button again to see what was generated.
                 if let url = viewModel.tripPlanPDFURL {
                     navigationController?.pushViewController(PDFViewerViewController(fileURL: url), animated: true)
                 }
@@ -295,7 +334,29 @@ final class TripSummaryViewController: UIViewController {
     }
 
     @objc private func didTapPurchase() {
-        showAlert(title: "Rezervasyon Tamamlandı", message: "Biletlerin ve konaklama rezervasyonun başarıyla tamamlandı.")
+        // A browsed-but-unsaved trip needs to exist in "Seyahatlerim" before it can be
+        // purchased — save it transparently rather than dead-ending the checkout flow.
+        if viewModel.savedTrip == nil {
+            viewModel.saveBrowsedTrip()
+        }
+
+        let confirmationViewController = TripPurchaseConfirmationViewController(tripTotal: viewModel.totalCost)
+        confirmationViewController.onConfirm = { [weak self, weak confirmationViewController] includingPlanAddOn in
+            guard let confirmationViewController else { return }
+            confirmationViewController.dismiss(animated: true) {
+                self?.completePurchase(includingPlanAddOn: includingPlanAddOn)
+            }
+        }
+        present(UINavigationController(rootViewController: confirmationViewController), animated: true)
+    }
+
+    private func completePurchase(includingPlanAddOn: Bool) {
+        guard viewModel.completePurchase(includingPlanAddOn: includingPlanAddOn) != nil else { return }
+        rebuildContent()
+        updateNavigationBarItems()
+        // Buying the add-on here only unlocks the button (now reading "Oluştur") — the actual
+        // AI generation waits for the traveler to tap it, same as buying it later would.
+        showAlert(title: "Satın Alma Tamamlandı", message: "Biletlerin ve konaklama rezervasyonun onaylandı.")
     }
 
     @objc private func didTapSaveTrip() {
@@ -326,6 +387,39 @@ final class TripSummaryViewController: UIViewController {
     }
 
     // MARK: - Private
+
+    private func didSelectHotel(_ hotelID: String, forStopNumber stopNumber: Int) {
+        let wasUnsaved = viewModel.savedTrip == nil
+        if wasUnsaved {
+            viewModel.saveBrowsedTrip()
+        }
+        guard viewModel.selectHotel(hotelID, forStopNumber: stopNumber) != nil else { return }
+
+        if wasUnsaved {
+            // Becoming a saved trip mid-selection changes the nav bar (public/edit icons
+            // appear) and retires the "Seyahatlerime Kaydet" CTA — everything else about the
+            // screen stays put, so only these two need refreshing.
+            updateNavigationBarItems()
+            if let index = contentStackView.arrangedSubviews.firstIndex(of: saveTripButton) {
+                contentStackView.removeArrangedSubview(saveTripButton)
+                saveTripButton.removeFromSuperview()
+            }
+        }
+
+        refreshStopCard(forStopNumber: stopNumber)
+    }
+
+    private func refreshStopCard(forStopNumber stopNumber: Int) {
+        guard
+            let stopIndex = viewModel.stops.firstIndex(where: { $0.stopNumber == stopNumber }),
+            stopCardViews.indices.contains(stopIndex)
+        else { return }
+
+        let updatedStop = viewModel.stops[stopIndex]
+        let cost = viewModel.totalCost(for: updatedStop)
+        stopCardViews[stopIndex].updateCost(cost)
+        totalCostView.updateAmount(viewModel.totalCost)
+    }
 
     private func presentLogin(onLoggedIn: @escaping () -> Void) {
         let coordinator = AuthCoordinator(presentingViewController: self)
@@ -509,24 +603,43 @@ private final class TripStopSummaryCardView: BaseCardView {
 
     // MARK: - Properties
 
-    var onBuyTicketTap: (() -> Void)?
-    var onReserveHotelTap: (() -> Void)?
+    var onSelectTicketTap: (() -> Void)?
+    var onHotelSelected: ((String) -> Void)?
+
+    /// Kept so `updateCost(_:)` can update just this one label instead of rebuilding the card.
+    private var costRow: SummaryInfoRow?
+    /// The same `POIMiniCardView` instances stay alive across a hotel-selection change — only
+    /// the newly-picked and previously-picked cards actually flip state (and animate); every
+    /// other card sees the exact same `isSelected` value it already had, so `POIMiniCardView`
+    /// skips both the selection animation and (since the image URL is unchanged) any image
+    /// reload. Rebuilding the whole row from scratch on every tap was what made every card —
+    /// hotels, places, restaurants alike — flash/reload at once.
+    private var hotelCardsByID: [String: POIMiniCardView] = [:]
+    private var hotelsByID: [String: Hotel] = [:]
+    private var currentSelectedHotelID: String?
 
     // MARK: - Init
 
-    init(stop: TripStopSnapshot, nights: Int, cost: Int) {
+    init(stop: TripStopSnapshot, nights: Int, cost: Int, isPurchased: Bool) {
         let cityTitle = stop.cityName.map { "\(stop.stopNumber). Durak — \($0)" } ?? "\(stop.stopNumber). Durak"
         super.init(title: cityTitle, iconSystemName: "mappin.and.ellipse")
-        setupContent(stop: stop, nights: nights, cost: cost)
+        setupContent(stop: stop, nights: nights, cost: cost, isPurchased: isPurchased)
     }
 
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
 
+    // MARK: - Public
+
+    /// Updates just the cost label after a hotel selection changes elsewhere — no rebuild.
+    func updateCost(_ cost: Int) {
+        costRow?.updateText("Bu Durağın Maliyeti: \(cost) TL")
+    }
+
     // MARK: - Setup
 
-    private func setupContent(stop: TripStopSnapshot, nights: Int, cost: Int) {
+    private func setupContent(stop: TripStopSnapshot, nights: Int, cost: Int, isPurchased: Bool) {
         var sections: [UIView] = []
 
         var infoRows: [UIView] = []
@@ -544,11 +657,17 @@ private final class TripStopSummaryCardView: BaseCardView {
 
         infoRows.append(SummaryInfoRow(iconSystemName: "person.2.fill", text: "\(stop.travelerCount) Kişi"))
 
-        let ticketRow = TicketPurchaseRowView(transportType: stop.transportType)
-        ticketRow.onBuyTap = { [weak self] in self?.onBuyTicketTap?() }
+        let ticketRow = TicketPurchaseRowView(transportType: stop.transportType, isPurchased: isPurchased)
+        ticketRow.onSelectTap = { [weak self] in self?.onSelectTicketTap?() }
         infoRows.append(ticketRow)
 
-        infoRows.append(SummaryInfoRow(iconSystemName: "turkishlirasign.circle.fill", text: "Bu Durağın Maliyeti: \(cost) TL", isEmphasized: true))
+        // Once purchased there's nothing left to total up — the ticket/hotel rows below
+        // already show what was actually bought.
+        if !isPurchased {
+            let costRow = SummaryInfoRow(iconSystemName: "turkishlirasign.circle.fill", text: "Bu Durağın Maliyeti: \(cost) TL", isEmphasized: true)
+            self.costRow = costRow
+            infoRows.append(costRow)
+        }
 
         let infoStack = UIStackView(arrangedSubviews: infoRows)
         infoStack.axis = .vertical
@@ -556,37 +675,20 @@ private final class TripStopSummaryCardView: BaseCardView {
         infoStack.translatesAutoresizingMaskIntoConstraints = false
         sections.append(infoStack)
 
-        let selectedHotels = stop.hotels.filter { stop.selectedHotelIDs.contains($0.id) }
-        if !selectedHotels.isEmpty {
-            sections.append(makePhotoRow(
-                caption: "Konaklama",
-                items: selectedHotels.map {
-                    POIDisplayItem(id: $0.id, name: $0.name, rating: $0.rating, priceText: "\($0.pricePerNight) \($0.currency)/gece", imageURL: $0.imageURL, isSelected: false)
-                },
-                cardActionTitle: "Rezervasyon Yap",
-                cardAction: { [weak self] in self?.onReserveHotelTap?() }
-            ))
-        } else if let cheapestHotel = stop.hotels.min(by: { $0.pricePerNight < $1.pricePerNight }) {
-            sections.append(makePhotoRow(
-                caption: "Önerilen Otel (en uygun fiyat)",
-                items: [
-                    POIDisplayItem(id: cheapestHotel.id, name: cheapestHotel.name, rating: cheapestHotel.rating, priceText: "\(cheapestHotel.pricePerNight) \(cheapestHotel.currency)/gece", imageURL: cheapestHotel.imageURL, isSelected: false)
-                ],
-                cardActionTitle: "Rezervasyon Yap",
-                cardAction: { [weak self] in self?.onReserveHotelTap?() }
-            ))
+        if let hotelSection = makeHotelSection(stop: stop, isPurchased: isPurchased) {
+            sections.append(hotelSection)
         }
 
         let selectedPlaces = stop.places.filter { stop.selectedPlaceIDs.contains($0.id) }
         if !selectedPlaces.isEmpty {
-            sections.append(makePhotoRow(caption: "Gezilecek Yerler", items: selectedPlaces.map {
+            sections.append(makeReadOnlyPhotoRow(caption: "Gezilecek Yerler", items: selectedPlaces.map {
                 POIDisplayItem(id: $0.id, name: $0.name, rating: $0.rating, priceText: nil, imageURL: $0.imageURL, isSelected: false)
             }))
         }
 
         let selectedRestaurants = stop.restaurants.filter { stop.selectedRestaurantIDs.contains($0.id) }
         if !selectedRestaurants.isEmpty {
-            sections.append(makePhotoRow(caption: "Restoranlar", items: selectedRestaurants.map {
+            sections.append(makeReadOnlyPhotoRow(caption: "Restoranlar", items: selectedRestaurants.map {
                 POIDisplayItem(id: $0.id, name: $0.name, rating: $0.rating, priceText: nil, imageURL: $0.imageURL, isSelected: false)
             }))
         }
@@ -605,7 +707,80 @@ private final class TripStopSummaryCardView: BaseCardView {
         ])
     }
 
-    private func makePhotoRow(caption: String, items: [POIDisplayItem], cardActionTitle: String? = nil, cardAction: (() -> Void)? = nil) -> UIView {
+    /// Pre-purchase: every hotel is shown, tappable, single-select ("Seç"). Post-purchase:
+    /// only the one that was actually bought, with no controls at all.
+    private func makeHotelSection(stop: TripStopSnapshot, isPurchased: Bool) -> UIView? {
+        guard !stop.hotels.isEmpty else { return nil }
+
+        if isPurchased {
+            let purchasedHotel = stop.hotels.first { stop.selectedHotelIDs.contains($0.id) } ?? stop.hotels[0]
+            // `isSelected: true` reuses the same checkmark badge the selection carousels show
+            // for "picked" — `confirmationText` flips the border green and adds the
+            // "Rezervasyon Yapıldı" caption so it reads as "paid for", right alongside the
+            // ticket's own "Satın Alındı" badge.
+            return makeReadOnlyPhotoRow(caption: "Satın Alınan Otel", items: [
+                POIDisplayItem(id: purchasedHotel.id, name: purchasedHotel.name, rating: purchasedHotel.rating, priceText: "\(purchasedHotel.pricePerNight) \(purchasedHotel.currency)/gece", imageURL: purchasedHotel.imageURL, isSelected: true, confirmationText: "Rezervasyon Yapıldı")
+            ])
+        }
+
+        // Cheapest of whatever's selected (matching `TripSummaryViewModel.primaryHotel(for:)`)
+        // when something already is, cheapest overall otherwise — so the highlighted card
+        // always agrees with the cost shown, even if Trip Creation left more than one hotel
+        // selected on this stop.
+        let selectedHotels = stop.hotels.filter { stop.selectedHotelIDs.contains($0.id) }
+        let initialSelectedID = selectedHotels.min(by: { $0.pricePerNight < $1.pricePerNight })?.id
+            ?? stop.hotels.min(by: { $0.pricePerNight < $1.pricePerNight })?.id
+        currentSelectedHotelID = initialSelectedID
+        hotelsByID = Dictionary(uniqueKeysWithValues: stop.hotels.map { ($0.id, $0) })
+        hotelCardsByID.removeAll()
+
+        let cardViews = stop.hotels.map { hotel -> POIMiniCardView in
+            let view = POIMiniCardView(photoHeight: WraithSpacing.space200)
+            view.translatesAutoresizingMaskIntoConstraints = false
+            view.setCardBackground(.wraithSurfaceVariant)
+            view.configure(with: hotelDisplayItem(hotel, isSelected: hotel.id == initialSelectedID))
+            view.setActionButton(title: "Seç")
+            let hotelID = hotel.id
+            let select: () -> Void = { [weak self] in self?.handleHotelTap(hotelID) }
+            view.onTap = select
+            view.onActionTap = select
+            hotelCardsByID[hotel.id] = view
+            return view
+        }
+
+        return makeCardsRow(caption: "Konaklama", cardViews: cardViews, hasActionButton: true)
+    }
+
+    private func hotelDisplayItem(_ hotel: Hotel, isSelected: Bool) -> POIDisplayItem {
+        POIDisplayItem(id: hotel.id, name: hotel.name, rating: hotel.rating, priceText: "\(hotel.pricePerNight) \(hotel.currency)/gece", imageURL: hotel.imageURL, isSelected: isSelected)
+    }
+
+    /// Re-configures the existing hotel cards in place (selected one flips on, the previously
+    /// selected one flips off, everyone else is a no-op) and reports the pick upward so the
+    /// controller can persist it and refresh the cost labels.
+    private func handleHotelTap(_ hotelID: String) {
+        guard hotelID != currentSelectedHotelID else { return }
+        currentSelectedHotelID = hotelID
+        for (id, hotel) in hotelsByID {
+            hotelCardsByID[id]?.configure(with: hotelDisplayItem(hotel, isSelected: id == hotelID))
+        }
+        onHotelSelected?(hotelID)
+    }
+
+    private func makeReadOnlyPhotoRow(caption: String, items: [POIDisplayItem]) -> UIView {
+        let cardViews = items.map { item -> POIMiniCardView in
+            let view = POIMiniCardView(photoHeight: WraithSpacing.space200)
+            view.translatesAutoresizingMaskIntoConstraints = false
+            view.setCardBackground(.wraithSurfaceVariant)
+            view.configure(with: item)
+            return view
+        }
+        return makeCardsRow(caption: caption, cardViews: cardViews, hasActionButton: false)
+    }
+
+    /// Bigger, showcase-style thumbnails (matching the selection carousels in Trip Creation)
+    /// in a horizontally scrolling row underneath a caption label.
+    private func makeCardsRow(caption: String, cardViews: [POIMiniCardView], hasActionButton: Bool) -> UIView {
         let captionLabel = UILabel()
         captionLabel.text = caption
         captionLabel.font = .systemFont(ofSize: 13, weight: .semibold)
@@ -616,20 +791,6 @@ private final class TripStopSummaryCardView: BaseCardView {
         scrollView.showsHorizontalScrollIndicator = false
         scrollView.translatesAutoresizingMaskIntoConstraints = false
 
-        // Bigger, showcase-style thumbnails (matching the selection carousels in Trip
-        // Creation) instead of the old small crop — the extra room goes entirely to the
-        // photo, not to the text rows below it. Each card (not the section header) carries
-        // its own action button, since that's the actual hotel/place the action applies to.
-        let cardViews = items.map { item -> POIMiniCardView in
-            let view = POIMiniCardView(photoHeight: WraithSpacing.space200)
-            view.translatesAutoresizingMaskIntoConstraints = false
-            view.setCardBackground(.wraithSurfaceVariant)
-            view.configure(with: item)
-            view.setActionButton(title: cardActionTitle)
-            view.onActionTap = cardAction
-            return view
-        }
-
         let cardsStackView = UIStackView(arrangedSubviews: cardViews)
         cardsStackView.axis = .horizontal
         cardsStackView.spacing = 10
@@ -637,14 +798,14 @@ private final class TripStopSummaryCardView: BaseCardView {
         scrollView.addSubview(cardsStackView)
 
         // Only activate the width constraints now that each card view actually shares an
-        // ancestor with `scrollView` (via `cardsStackView`) — doing this inside the `map`
-        // above, before the views were attached to anything, crashed with "Unable to
-        // activate constraint... no common ancestor".
+        // ancestor with `scrollView` (via `cardsStackView`) — doing this before the views
+        // were attached to anything crashed with "Unable to activate constraint... no common
+        // ancestor".
         cardViews.forEach { $0.widthAnchor.constraint(equalTo: scrollView.widthAnchor, multiplier: 0.72).isActive = true }
 
         // The per-card action button (when present) needs extra room below the price so it
         // doesn't get squeezed against the card's bottom edge.
-        let cardsHeight: CGFloat = cardActionTitle == nil ? WraithSpacing.space280 : WraithSpacing.space320
+        let cardsHeight: CGFloat = hasActionButton ? WraithSpacing.space320 : WraithSpacing.space280
 
         NSLayoutConstraint.activate([
             scrollView.heightAnchor.constraint(equalToConstant: cardsHeight),
@@ -719,6 +880,12 @@ private final class SummaryInfoRow: UIView {
         fatalError("init(coder:) has not been implemented")
     }
 
+    // MARK: - Public
+
+    func updateText(_ text: String) {
+        textLabel.text = text
+    }
+
     // MARK: - Setup
 
     private func setupLayout() {
@@ -737,8 +904,9 @@ private final class SummaryInfoRow: UIView {
 // MARK: - TicketPurchaseRowView
 
 /// Replaces the plain transport `SummaryInfoRow` with one that also surfaces a mock starting
-/// ticket price and a direct "Bilet Al" action, right where the traveler is already looking
-/// at how they're getting there.
+/// ticket price and a "Bilet Seç" action — pre-purchase this just marks the (only) fare
+/// option as picked, the real charge happens at checkout. Once the trip is purchased, this
+/// switches to a read-only row naming the (mock) carrier instead.
 private final class TicketPurchaseRowView: UIView {
 
     // MARK: - UI Components
@@ -775,9 +943,9 @@ private final class TicketPurchaseRowView: UIView {
         return stack
     }()
 
-    private lazy var buyButton: UIButton = {
+    private lazy var selectButton: UIButton = {
         var configuration = UIButton.Configuration.filled()
-        configuration.title = "Bilet Al"
+        configuration.title = "Bilet Seç"
         configuration.baseBackgroundColor = TripAccentTheme.accent
         configuration.baseForegroundColor = .wraithOnPrimary
         configuration.cornerStyle = .capsule
@@ -791,13 +959,54 @@ private final class TicketPurchaseRowView: UIView {
         button.translatesAutoresizingMaskIntoConstraints = false
         button.setContentHuggingPriority(.required, for: .horizontal)
         button.setContentCompressionResistancePriority(.required, for: .horizontal)
-        button.addTarget(self, action: #selector(didTapBuy), for: .touchUpInside)
+        button.addTarget(self, action: #selector(didTapSelect), for: .touchUpInside)
         button.applyStandardPressAnimation()
         return button
     }()
 
+    /// Clearly-affirmative "this ticket was actually bought" marker — shown in place of
+    /// `selectButton` once the trip is purchased, rather than just relying on the row's title
+    /// text changing (easy to miss scanning past a card that otherwise looks the same).
+    private lazy var purchasedBadgeView: UIView = {
+        let icon = UIImageView(image: UIImage(systemName: "checkmark.circle.fill"))
+        icon.tintColor = .systemGreen
+        icon.contentMode = .scaleAspectFit
+        icon.translatesAutoresizingMaskIntoConstraints = false
+
+        let label = UILabel()
+        label.text = "Satın Alındı"
+        label.font = .systemFont(ofSize: 12, weight: .semibold)
+        label.textColor = .systemGreen
+        label.translatesAutoresizingMaskIntoConstraints = false
+
+        let stack = UIStackView(arrangedSubviews: [icon, label])
+        stack.axis = .horizontal
+        stack.alignment = .center
+        stack.spacing = WraithSpacing.space4
+        stack.isUserInteractionEnabled = false
+        stack.translatesAutoresizingMaskIntoConstraints = false
+
+        let container = UIView()
+        container.backgroundColor = UIColor.systemGreen.withAlphaComponent(0.15)
+        container.layer.cornerRadius = WraithRadius.radius12
+        container.isHidden = true
+        container.setContentHuggingPriority(.required, for: .horizontal)
+        container.translatesAutoresizingMaskIntoConstraints = false
+        container.addSubview(stack)
+
+        NSLayoutConstraint.activate([
+            stack.topAnchor.constraint(equalTo: container.topAnchor, constant: WraithSpacing.space6),
+            stack.bottomAnchor.constraint(equalTo: container.bottomAnchor, constant: -WraithSpacing.space6),
+            stack.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: WraithSpacing.space10),
+            stack.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -WraithSpacing.space10),
+            icon.widthAnchor.constraint(equalToConstant: 14),
+            icon.heightAnchor.constraint(equalToConstant: 14)
+        ])
+        return container
+    }()
+
     private lazy var rowStackView: UIStackView = {
-        let stack = UIStackView(arrangedSubviews: [iconImageView, textStackView, buyButton])
+        let stack = UIStackView(arrangedSubviews: [iconImageView, textStackView, selectButton, purchasedBadgeView])
         stack.axis = .horizontal
         stack.alignment = .center
         stack.spacing = 10
@@ -807,15 +1016,26 @@ private final class TicketPurchaseRowView: UIView {
 
     // MARK: - Properties
 
-    var onBuyTap: (() -> Void)?
+    var onSelectTap: (() -> Void)?
 
     // MARK: - Init
 
-    init(transportType: TransportType) {
+    init(transportType: TransportType, isPurchased: Bool) {
         super.init(frame: .zero)
-        iconImageView.image = UIImage(systemName: transportType.departureIconName)
-        titleLabel.text = transportType.title
-        priceLabel.text = "Kişi başı min. \(Self.mockMinimumPrice(for: transportType)) TL"
+        if isPurchased {
+            iconImageView.image = UIImage(systemName: "checkmark.seal.fill")
+            iconImageView.tintColor = .systemGreen
+            titleLabel.text = transportType.purchasedCarrierName
+            priceLabel.text = "Bilet satın alındı"
+            selectButton.isHidden = true
+            purchasedBadgeView.isHidden = false
+        } else {
+            iconImageView.image = UIImage(systemName: transportType.departureIconName)
+            titleLabel.text = transportType.title
+            priceLabel.text = "Kişi başı min. \(transportType.mockMinimumTicketPrice) TL"
+            selectButton.isHidden = false
+            purchasedBadgeView.isHidden = true
+        }
         setupLayout()
     }
 
@@ -839,18 +1059,8 @@ private final class TicketPurchaseRowView: UIView {
 
     // MARK: - Actions
 
-    @objc private func didTapBuy() {
-        onBuyTap?()
-    }
-
-    // MARK: - Private
-
-    private static func mockMinimumPrice(for transportType: TransportType) -> Int {
-        switch transportType {
-        case .airplane: return 2250
-        case .bus: return 850
-        case .car: return 450
-        }
+    @objc private func didTapSelect() {
+        onSelectTap?()
     }
 }
 

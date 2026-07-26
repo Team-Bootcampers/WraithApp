@@ -284,7 +284,9 @@ final class TripCreationViewController: UIViewController {
             backendTripId: existingTrip?.backendTripId,
             tripPlanPDFFileName: existingTrip?.tripPlanPDFFileName,
             estimatedTotalCostAmount: existingTrip?.estimatedTotalCostAmount,
-            estimatedTotalCostCurrency: existingTrip?.estimatedTotalCostCurrency
+            estimatedTotalCostCurrency: existingTrip?.estimatedTotalCostCurrency,
+            isPurchased: existingTrip?.isPurchased ?? false,
+            hasPurchasedPlanAddOn: existingTrip?.hasPurchasedPlanAddOn ?? false
         )
         TripStore.shared.save(savedTrip)
 

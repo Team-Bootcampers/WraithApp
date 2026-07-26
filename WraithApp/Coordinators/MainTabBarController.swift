@@ -7,7 +7,7 @@
 
 import UIKit
 
-/// Root tab bar shown after onboarding: Anasayfa, Yeni Seyahat, Seyahatlerim, Profil.
+/// Root tab bar shown after onboarding: Keşfet, Yeni Seyahat, Seyahatlerim, Profil.
 final class MainTabBarController: UITabBarController {
 
     enum InitialTab {
@@ -71,7 +71,7 @@ final class MainTabBarController: UITabBarController {
         let homeVC = HomeViewController()
         let homeTab = wrap(
             homeVC,
-            title: "Anasayfa",
+            title: "Keşfet",
             image: UIImage(systemName: "house"),
             selectedImage: UIImage(systemName: "house.fill")
         )
