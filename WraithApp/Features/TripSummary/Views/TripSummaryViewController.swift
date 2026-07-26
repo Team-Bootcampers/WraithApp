@@ -253,7 +253,7 @@ final class TripSummaryViewController: UIViewController {
             updatePublicIconAppearance()
             navigationBarActionsStackView.addArrangedSubview(publicIconButton)
         }
-        if !viewModel.stops.isEmpty {
+        if viewModel.savedTrip != nil, !viewModel.stops.isEmpty {
             navigationBarActionsStackView.addArrangedSubview(editIconButton)
         }
         navigationItem.rightBarButtonItem = navigationBarActionsStackView.arrangedSubviews.isEmpty
