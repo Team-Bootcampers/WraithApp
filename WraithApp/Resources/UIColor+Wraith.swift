@@ -45,6 +45,8 @@ extension UIColor {
     static let wraithSurfaceVariant = UIColor(light: "#FFF3D6", dark: "#3D3120")
     static let wraithOnPrimary = UIColor.white
 
+    static let wraithPrimaryDeep = UIColor(light: "#C6303C", dark: "#E64550")
+    static let wraithOnSecondary = UIColor(light: "#2B2118", dark: "#2B2118")
     /// Destructive/error state (delete actions, validation messages) — deliberately distinct
     /// from `wraithPrimary` even though both are red-toned, so a destructive affordance never
     /// reads as "selected/active" (which already uses `wraithPrimary`).

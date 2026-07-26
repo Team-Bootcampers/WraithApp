@@ -9,7 +9,7 @@ import UIKit
 
 enum TripAccentTheme {
     static let accent = UIColor.wraithPrimary
-    static let accentDeep = UIColor(light: "#C6303C", dark: "#E64550")
+    static let accentDeep = UIColor.wraithPrimaryDeep
 
     static var gradientColors: [CGColor] {
         [accent.cgColor, accentDeep.cgColor]

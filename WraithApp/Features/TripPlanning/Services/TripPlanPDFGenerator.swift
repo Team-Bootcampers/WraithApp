@@ -18,14 +18,21 @@ final class TripPlanPDFGenerator {
         static let margin: CGFloat = 40
     }
 
+    /// Every color here is the *same* Wraith design token used everywhere else in the app,
+    /// just pinned to its light-appearance value — PDFs can't render `UIColor(light:dark:)`'s
+    /// dynamic provider, but the underlying palette must still be the single source of truth.
     private enum Palette {
-        static let primary = UIColor(hex: "#E63946")
-        static let primaryDark = UIColor(hex: "#B3212C")
-        static let secondary = UIColor(hex: "#FFC145")
-        static let onSurface = UIColor(hex: "#2B2118")
-        static let onSurfaceVariant = UIColor(hex: "#7A6F63")
-        static let surfaceVariant = UIColor(hex: "#FFF3D6")
-        static let outlineVariant = UIColor(hex: "#F0E4C8")
+        private static let lightTrait = UITraitCollection(userInterfaceStyle: .light)
+        private static func resolved(_ color: UIColor) -> UIColor { color.resolvedColor(with: lightTrait) }
+
+        static let primary = resolved(.wraithPrimary)
+        static let primaryDark = resolved(.wraithPrimaryDeep)
+        static let secondary = resolved(.wraithSecondary)
+        static let onPrimary = UIColor.wraithOnPrimary
+        static let onSurface = resolved(.wraithOnSurface)
+        static let onSurfaceVariant = resolved(.wraithOnSurfaceVariant)
+        static let surfaceVariant = resolved(.wraithSurfaceVariant)
+        static let outlineVariant = resolved(.wraithOutlineVariant)
     }
 
     private var cursorY: CGFloat = 0
@@ -55,20 +62,20 @@ final class TripPlanPDFGenerator {
         let headerRect = CGRect(x: 0, y: 0, width: Metric.pageSize.width, height: 300)
         drawGradient(in: headerRect, colors: [Palette.primary, Palette.primaryDark])
 
-        draw(text: "W R A I T H", font: .systemFont(ofSize: 13, weight: .bold), color: .white.withAlphaComponent(0.85), rect: CGRect(x: Metric.margin, y: 40, width: contentWidth, height: 18))
+        draw(text: "W R A I T H", font: .systemFont(ofSize: 13, weight: .bold), color: Palette.onPrimary.withAlphaComponent(0.85), rect: CGRect(x: Metric.margin, y: 40, width: contentWidth, height: 18))
         draw(text: "DETAYLI GEZİ PLANI", font: .systemFont(ofSize: 11, weight: .semibold), color: Palette.secondary, rect: CGRect(x: Metric.margin, y: 60, width: contentWidth, height: 16))
 
         let titleHeight = max(height(for: response.tripTitle, font: .systemFont(ofSize: 30, weight: .bold), width: contentWidth), 40)
-        draw(text: response.tripTitle, font: .systemFont(ofSize: 30, weight: .bold), color: .white, rect: CGRect(x: Metric.margin, y: 92, width: contentWidth, height: titleHeight))
+        draw(text: response.tripTitle, font: .systemFont(ofSize: 30, weight: .bold), color: Palette.onPrimary, rect: CGRect(x: Metric.margin, y: 92, width: contentWidth, height: titleHeight))
 
         var pillX = Metric.margin
         let pillY = 92 + titleHeight + 16
         let matchPill = drawPill("★ %\(Int(response.matchScore)) Eşleşme", font: .systemFont(ofSize: 12, weight: .bold), textColor: Palette.onSurface, backgroundColor: Palette.secondary, origin: CGPoint(x: pillX, y: pillY))
         pillX += matchPill.width + 8
-        let travelerPill = drawPill("\(travelerCount) Kişi", font: .systemFont(ofSize: 12, weight: .semibold), textColor: .white, backgroundColor: .white.withAlphaComponent(0.2), origin: CGPoint(x: pillX, y: pillY))
+        let travelerPill = drawPill("\(travelerCount) Kişi", font: .systemFont(ofSize: 12, weight: .semibold), textColor: Palette.onPrimary, backgroundColor: Palette.onPrimary.withAlphaComponent(0.2), origin: CGPoint(x: pillX, y: pillY))
         pillX += travelerPill.width + 8
         if let firstStop = response.stops.first, let lastStop = response.stops.last {
-            drawPill("\(firstStop.arrivalDate) – \(lastStop.departureDate)", font: .systemFont(ofSize: 12, weight: .semibold), textColor: .white, backgroundColor: .white.withAlphaComponent(0.2), origin: CGPoint(x: pillX, y: pillY))
+            drawPill("\(firstStop.arrivalDate) – \(lastStop.departureDate)", font: .systemFont(ofSize: 12, weight: .semibold), textColor: Palette.onPrimary, backgroundColor: Palette.onPrimary.withAlphaComponent(0.2), origin: CGPoint(x: pillX, y: pillY))
         }
 
         cursorY = 330
@@ -93,8 +100,8 @@ final class TripPlanPDFGenerator {
         ensureSpace(totalCardHeight)
         let totalRect = CGRect(x: Metric.margin, y: cursorY, width: contentWidth, height: totalCardHeight)
         drawGradient(in: totalRect, colors: [Palette.primary, Palette.primaryDark], cornerRadius: 14)
-        draw(text: "TOPLAM TAHMİNİ MALİYET", font: .systemFont(ofSize: 11, weight: .bold), color: .white.withAlphaComponent(0.85), rect: CGRect(x: totalRect.minX + 16, y: totalRect.minY + 10, width: totalRect.width - 32, height: 14))
-        draw(text: "\(formattedAmount(total.amount)) \(total.currency)", font: .systemFont(ofSize: 22, weight: .bold), color: .white, rect: CGRect(x: totalRect.minX + 16, y: totalRect.minY + 28, width: totalRect.width - 32, height: 28))
+        draw(text: "TOPLAM TAHMİNİ MALİYET", font: .systemFont(ofSize: 11, weight: .bold), color: Palette.onPrimary.withAlphaComponent(0.85), rect: CGRect(x: totalRect.minX + 16, y: totalRect.minY + 10, width: totalRect.width - 32, height: 14))
+        draw(text: "\(formattedAmount(total.amount)) \(total.currency)", font: .systemFont(ofSize: 22, weight: .bold), color: Palette.onPrimary, rect: CGRect(x: totalRect.minX + 16, y: totalRect.minY + 28, width: totalRect.width - 32, height: 28))
         cursorY += totalCardHeight + 22
 
         let breakdown = response.budgetBreakdown
@@ -137,9 +144,9 @@ final class TripPlanPDFGenerator {
         let headerRect = CGRect(x: Metric.margin, y: cursorY, width: contentWidth, height: headerHeight)
         Palette.primary.setFill()
         UIBezierPath(roundedRect: headerRect, cornerRadius: 14).fill()
-        drawCircleBadge(systemName: "mappin.and.ellipse", diameter: 34, backgroundColor: .white.withAlphaComponent(0.2), tint: .white, center: CGPoint(x: headerRect.minX + 30, y: headerRect.midY))
-        draw(text: "\(stop.stopNumber). DURAK", font: .systemFont(ofSize: 10, weight: .bold), color: .white.withAlphaComponent(0.8), rect: CGRect(x: headerRect.minX + 56, y: headerRect.minY + 12, width: headerRect.width - 70, height: 14))
-        draw(text: "\(stop.cityName), \(stop.countryName)", font: .systemFont(ofSize: 17, weight: .bold), color: .white, rect: CGRect(x: headerRect.minX + 56, y: headerRect.minY + 28, width: headerRect.width - 70, height: 24))
+        drawCircleBadge(systemName: "mappin.and.ellipse", diameter: 34, backgroundColor: Palette.onPrimary.withAlphaComponent(0.2), tint: Palette.onPrimary, center: CGPoint(x: headerRect.minX + 30, y: headerRect.midY))
+        draw(text: "\(stop.stopNumber). DURAK", font: .systemFont(ofSize: 10, weight: .bold), color: Palette.onPrimary.withAlphaComponent(0.8), rect: CGRect(x: headerRect.minX + 56, y: headerRect.minY + 12, width: headerRect.width - 70, height: 14))
+        draw(text: "\(stop.cityName), \(stop.countryName)", font: .systemFont(ofSize: 17, weight: .bold), color: Palette.onPrimary, rect: CGRect(x: headerRect.minX + 56, y: headerRect.minY + 28, width: headerRect.width - 70, height: 24))
         cursorY += headerHeight + 14
 
         var pillX = Metric.margin
@@ -168,7 +175,7 @@ final class TripPlanPDFGenerator {
         cursorY += 12
         ensureSpace(70)
 
-        let badgeSize = drawPill("GÜN \(day.dayNumber)", font: .systemFont(ofSize: 11, weight: .bold), textColor: .white, backgroundColor: Palette.primary, origin: CGPoint(x: Metric.margin, y: cursorY))
+        let badgeSize = drawPill("GÜN \(day.dayNumber)", font: .systemFont(ofSize: 11, weight: .bold), textColor: Palette.onPrimary, backgroundColor: Palette.primary, origin: CGPoint(x: Metric.margin, y: cursorY))
         let titleText = [day.theme, day.date].compactMap { $0 }.joined(separator: "  ·  ")
         draw(text: titleText, font: .systemFont(ofSize: 14, weight: .semibold), color: Palette.onSurface, rect: CGRect(x: Metric.margin + badgeSize.width + 10, y: cursorY + (badgeSize.height - 18) / 2, width: contentWidth - badgeSize.width - 10, height: 20))
         cursorY += badgeSize.height + 12
@@ -214,7 +221,7 @@ final class TripPlanPDFGenerator {
         Palette.outlineVariant.setStroke()
         border.stroke()
 
-        drawCircleBadge(systemName: categoryIcon(item.category), diameter: 22, backgroundColor: Palette.primary, tint: .white, center: CGPoint(x: cardRect.minX + cardPadding + 11, y: cardRect.minY + cardPadding + 11))
+        drawCircleBadge(systemName: categoryIcon(item.category), diameter: 22, backgroundColor: Palette.primary, tint: Palette.onPrimary, center: CGPoint(x: cardRect.minX + cardPadding + 11, y: cardRect.minY + cardPadding + 11))
 
         let textX = cardRect.minX + cardPadding + indent
         var textY = cardRect.minY + cardPadding

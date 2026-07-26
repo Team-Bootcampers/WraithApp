@@ -56,7 +56,7 @@ final class TripSummaryViewController: UIViewController {
         configuration.image = UIImage(systemName: "doc.text.fill")
         configuration.imagePadding = 8
         configuration.baseBackgroundColor = .wraithSecondary
-        configuration.baseForegroundColor = .black
+        configuration.baseForegroundColor = .wraithOnSecondary
         configuration.cornerStyle = .large
         configuration.titleTextAttributesTransformer = UIConfigurationTextAttributesTransformer { incoming in
             var outgoing = incoming
@@ -241,7 +241,7 @@ final class TripSummaryViewController: UIViewController {
         configuration.image = UIImage(systemName: isPublic ? "globe.slash.fill" : "globe")
         configuration.imagePadding = 8
         configuration.baseBackgroundColor = isPublic ? .wraithSurfaceVariant : .wraithSecondary
-        configuration.baseForegroundColor = isPublic ? .wraithOnSurfaceVariant : .black
+        configuration.baseForegroundColor = isPublic ? .wraithOnSurfaceVariant : .wraithOnSecondary
         configuration.cornerStyle = .large
         configuration.titleTextAttributesTransformer = UIConfigurationTextAttributesTransformer { incoming in
             var outgoing = incoming

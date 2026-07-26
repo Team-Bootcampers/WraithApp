@@ -101,7 +101,7 @@ final class PublishTripFormViewController: UIViewController {
         configuration.image = UIImage(systemName: "paperplane.fill")
         configuration.imagePadding = 8
         configuration.baseBackgroundColor = .wraithSecondary
-        configuration.baseForegroundColor = .wraithOnSurface
+        configuration.baseForegroundColor = .wraithOnSecondary
         configuration.cornerStyle = .large
         configuration.titleTextAttributesTransformer = UIConfigurationTextAttributesTransformer { incoming in
             var outgoing = incoming
