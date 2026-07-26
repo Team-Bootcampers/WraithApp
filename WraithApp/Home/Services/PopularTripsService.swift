@@ -65,7 +65,6 @@ final class PopularTripsService: PopularTripsServiceProtocol {
             price: Int(totalAmount.rounded()),
             currency: currency,
             popularityScore: dto.viewCount,
-            isFavorite: false,
             stops: dto.stops.map(Self.makeStopSnapshot)
         )
     }

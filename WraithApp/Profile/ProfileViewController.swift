@@ -10,7 +10,6 @@ import UIKit
 final class ProfileViewController: UIViewController {
 
     var onRequestRetakeOnboarding: (() -> Void)?
-    var onTripSaved: ((SavedTrip) -> Void)?
 
     private var authCoordinator: AuthCoordinator?
 
@@ -63,37 +62,6 @@ final class ProfileViewController: UIViewController {
     // MARK: - Auth action
 
     private lazy var authActionButton = GradientCapsuleButton(title: "")
-
-    // MARK: - Features
-
-    private let featuresSectionLabel: UILabel = {
-        let label = UILabel()
-        label.translatesAutoresizingMaskIntoConstraints = false
-        label.text = "ÖZELLİKLER"
-        label.font = .systemFont(ofSize: 13, weight: .semibold)
-        label.textColor = .wraithOnSurfaceVariant
-        return label
-    }()
-
-    private let surpriseTripCard = FeatureCardView(
-        iconSystemName: "shippingbox.fill",
-        title: "Şaşırt Beni",
-        subtitle: "Bütçeni söyle, destinasyonu son ana kadar gizli tutalım."
-    )
-
-    private let compatibilityCard = FeatureCardView(
-        iconSystemName: "heart.text.square.fill",
-        title: "Seyahat Uyumu",
-        subtitle: "Arkadaşınla ne kadar uyumlu seyahat ettiğinizi ölç."
-    )
-
-    private lazy var featuresStackView: UIStackView = {
-        let stack = UIStackView(arrangedSubviews: [surpriseTripCard, compatibilityCard])
-        stack.translatesAutoresizingMaskIntoConstraints = false
-        stack.axis = .vertical
-        stack.spacing = WraithSpacing.space12
-        return stack
-    }()
 
     // MARK: - Preferences
 
@@ -207,7 +175,7 @@ final class ProfileViewController: UIViewController {
         scrollView.addSubview(contentView)
         view.addSubview(countdownLabel)
 
-        [headerStack, authActionButton, featuresSectionLabel, featuresStackView, themeRowView, legalStack, retakeOnboardingButton, versionLabel].forEach { contentView.addSubview($0) }
+        [headerStack, authActionButton, themeRowView, legalStack, retakeOnboardingButton, versionLabel].forEach { contentView.addSubview($0) }
 
         NSLayoutConstraint.activate([
             scrollView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
@@ -237,15 +205,7 @@ final class ProfileViewController: UIViewController {
             authActionButton.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: WraithSpacing.space24),
             authActionButton.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -WraithSpacing.space24),
 
-            featuresSectionLabel.topAnchor.constraint(equalTo: authActionButton.bottomAnchor, constant: WraithSpacing.space32),
-            featuresSectionLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: WraithSpacing.space24),
-            featuresSectionLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -WraithSpacing.space24),
-
-            featuresStackView.topAnchor.constraint(equalTo: featuresSectionLabel.bottomAnchor, constant: WraithSpacing.space12),
-            featuresStackView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: WraithSpacing.space24),
-            featuresStackView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -WraithSpacing.space24),
-
-            themeRowView.topAnchor.constraint(equalTo: featuresStackView.bottomAnchor, constant: WraithSpacing.space32),
+            themeRowView.topAnchor.constraint(equalTo: authActionButton.bottomAnchor, constant: WraithSpacing.space32),
             themeRowView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: WraithSpacing.space24),
             themeRowView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -WraithSpacing.space24),
 
@@ -278,8 +238,6 @@ final class ProfileViewController: UIViewController {
 
     private func setupActions() {
         authActionButton.addTarget(self, action: #selector(didTapAuthAction), for: .touchUpInside)
-        surpriseTripCard.addTarget(self, action: #selector(didTapSurpriseTrip), for: .touchUpInside)
-        compatibilityCard.addTarget(self, action: #selector(didTapCompatibility), for: .touchUpInside)
         themeSwitch.addTarget(self, action: #selector(didToggleTheme(_:)), for: .valueChanged)
         privacyRow.addTarget(self, action: #selector(didTapPrivacy), for: .touchUpInside)
         termsRow.addTarget(self, action: #selector(didTapTerms), for: .touchUpInside)
@@ -329,40 +287,6 @@ final class ProfileViewController: UIViewController {
 
     @objc private func didTapRetakeOnboarding() {
         onRequestRetakeOnboarding?()
-    }
-
-    @objc private func didTapSurpriseTrip() {
-        guard let persona = requirePersona() else { return }
-        let viewController = SurpriseTripViewController(persona: persona)
-        viewController.onTripSaved = { [weak self] trip in self?.onTripSaved?(trip) }
-        navigationController?.pushViewController(viewController, animated: true)
-    }
-
-    @objc private func didTapCompatibility() {
-        guard let persona = requirePersona() else { return }
-        let viewController = TravelCompatibilityViewController(persona: persona)
-        viewController.onTripSaved = { [weak self] trip in self?.onTripSaved?(trip) }
-        navigationController?.pushViewController(viewController, animated: true)
-    }
-
-    /// Both features are built on the character analysis, so nudge the traveler into it
-    /// instead of opening a screen that could only show an empty state.
-    private func requirePersona() -> TravelPersona? {
-        if let persona = TravelPersonaStore.current {
-            return persona
-        }
-
-        let alert = UIAlertController(
-            title: "Önce seyahat kimliğin gerekiyor",
-            message: "Bu özellikler karakter analizi sonucuna göre çalışıyor. Kısa testi tamamlayarak başlayabilirsin.",
-            preferredStyle: .alert
-        )
-        alert.addAction(UIAlertAction(title: "Vazgeç", style: .cancel))
-        alert.addAction(UIAlertAction(title: "Teste Başla", style: .default) { [weak self] _ in
-            self?.onRequestRetakeOnboarding?()
-        })
-        present(alert, animated: true)
-        return nil
     }
 
     @objc private func didTapVersionLabel() {

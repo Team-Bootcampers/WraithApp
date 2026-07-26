@@ -85,11 +85,22 @@ final class MainTabBarController: UITabBarController {
             selectedImage: UIImage(systemName: "suitcase.fill")
         )
 
+        let activitiesVC = ActivitiesViewController()
+        activitiesVC.onRequestRetakeOnboarding = { [weak self] in
+            self?.onRequestRetakeOnboarding?()
+        }
+        activitiesVC.onTripSaved = showSavedTrip
+        let activitiesTab = wrap(
+            activitiesVC,
+            title: "Etkinlikler",
+            image: UIImage(systemName: "wand.and.stars"),
+            selectedImage: UIImage(systemName: "wand.and.stars.inverse")
+        )
+
         let profileVC = ProfileViewController()
         profileVC.onRequestRetakeOnboarding = { [weak self] in
             self?.onRequestRetakeOnboarding?()
         }
-        profileVC.onTripSaved = showSavedTrip
         let profileTab = wrap(
             profileVC,
             title: "Profil",
@@ -97,7 +108,7 @@ final class MainTabBarController: UITabBarController {
             selectedImage: UIImage(systemName: "person.crop.circle.fill")
         )
 
-        viewControllers = [homeTab, tripCreationTab, myTripsTab, profileTab]
+        viewControllers = [homeTab, tripCreationTab, myTripsTab, activitiesTab, profileTab]
 
         switch initialTab {
         case .home:

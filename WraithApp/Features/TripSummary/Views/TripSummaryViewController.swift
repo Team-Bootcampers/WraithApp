@@ -284,7 +284,8 @@ final class TripSummaryViewController: UIViewController {
                     navigationController?.pushViewController(PDFViewerViewController(fileURL: url), animated: true)
                 }
             } catch {
-                let message = (error as? TripPlanningError)?.errorDescription ?? "Detaylı gezi planı oluşturulamadı, lütfen tekrar dene."
+                print("⚠️ TripPlanningService.generatePlanPDF failed: \(error)")
+                let message = (error as? TripPlanningError)?.errorDescription ?? "Detaylı gezi planı oluşturulamadı: \(error.localizedDescription)"
                 showAlert(title: "Bir Sorun Oluştu", message: message)
             }
 

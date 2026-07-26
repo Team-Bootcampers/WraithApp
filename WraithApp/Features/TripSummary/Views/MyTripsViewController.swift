@@ -32,69 +32,16 @@ final class MyTripsViewController: UIViewController {
         return tableView
     }()
 
-    private let emptyIconContainerView: UIView = {
-        let view = UIView()
-        view.translatesAutoresizingMaskIntoConstraints = false
-        view.backgroundColor = UIColor.wraithPrimary.withAlphaComponent(0.1)
-        view.layer.cornerRadius = WraithRadius.radius38
-        return view
-    }()
-
-    private let emptyIconImageView: UIImageView = {
-        let imageView = UIImageView(image: UIImage(systemName: "airplane"))
-        imageView.translatesAutoresizingMaskIntoConstraints = false
-        imageView.tintColor = .wraithPrimary
-        imageView.contentMode = .scaleAspectFit
-        return imageView
-    }()
-
-    private let emptyTitleLabel: UILabel = {
-        let label = UILabel()
-        label.translatesAutoresizingMaskIntoConstraints = false
-        label.text = "Henüz seyahatin yok"
-        label.font = .systemFont(ofSize: 20, weight: .bold)
-        label.textColor = .wraithOnSurface
-        return label
-    }()
-
-    private let emptySubtitleLabel: UILabel = {
-        let label = UILabel()
-        label.translatesAutoresizingMaskIntoConstraints = false
-        label.text = "\"Yeni Seyahat\" sekmesinden ilk seyahatini oluştur."
-        label.font = .systemFont(ofSize: 15, weight: .regular)
-        label.textColor = .wraithOnSurfaceVariant
-        label.numberOfLines = 0
-        label.textAlignment = .center
-        return label
-    }()
-
-    private lazy var emptyStateView: UIView = {
-        let container = UIView()
-        container.translatesAutoresizingMaskIntoConstraints = false
-        emptyIconContainerView.addSubview(emptyIconImageView)
-        [emptyIconContainerView, emptyTitleLabel, emptySubtitleLabel].forEach { container.addSubview($0) }
-
-        NSLayoutConstraint.activate([
-            emptyIconContainerView.centerYAnchor.constraint(equalTo: container.centerYAnchor, constant: -WraithSpacing.space60),
-            emptyIconContainerView.centerXAnchor.constraint(equalTo: container.centerXAnchor),
-            emptyIconContainerView.widthAnchor.constraint(equalToConstant: 76),
-            emptyIconContainerView.heightAnchor.constraint(equalToConstant: 76),
-
-            emptyIconImageView.centerXAnchor.constraint(equalTo: emptyIconContainerView.centerXAnchor),
-            emptyIconImageView.centerYAnchor.constraint(equalTo: emptyIconContainerView.centerYAnchor),
-            emptyIconImageView.widthAnchor.constraint(equalToConstant: 34),
-            emptyIconImageView.heightAnchor.constraint(equalToConstant: 34),
-
-            emptyTitleLabel.topAnchor.constraint(equalTo: emptyIconContainerView.bottomAnchor, constant: WraithSpacing.space20),
-            emptyTitleLabel.centerXAnchor.constraint(equalTo: container.centerXAnchor),
-
-            emptySubtitleLabel.topAnchor.constraint(equalTo: emptyTitleLabel.bottomAnchor, constant: WraithSpacing.space8),
-            emptySubtitleLabel.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: WraithSpacing.space24),
-            emptySubtitleLabel.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -WraithSpacing.space24)
-        ])
-
-        return container
-    }()
+    /// `backgroundView`-based centering (`tableView.backgroundView = ...`) relies on legacy
+    /// `autoresizingMask` sizing, which never resolves correctly once the view has
+    /// `translatesAutoresizingMaskIntoConstraints = false` — pinning it directly to `view`
+    /// with real Auto Layout constraints (below, in `setupLayout`) keeps it correctly
+    /// centered regardless of when it's shown.
+    private lazy var emptyStateView = EmptyStateView(
+        iconSystemName: "airplane",
+        title: "Henüz seyahatin yok",
+        subtitle: "\"Yeni Seyahat\" sekmesinden ilk seyahatini oluştur."
+    )
 
     private var trips: [SavedTrip] = []
 
@@ -112,63 +59,63 @@ final class MyTripsViewController: UIViewController {
 
     private func setupLayout() {
         view.addSubview(tableView)
+        view.addSubview(emptyStateView)
         NSLayoutConstraint.activate([
             tableView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
             tableView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             tableView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            tableView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor)
+            tableView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor),
+
+            emptyStateView.centerXAnchor.constraint(equalTo: view.safeAreaLayoutGuide.centerXAnchor),
+            emptyStateView.centerYAnchor.constraint(equalTo: view.safeAreaLayoutGuide.centerYAnchor),
+            emptyStateView.leadingAnchor.constraint(greaterThanOrEqualTo: view.leadingAnchor, constant: WraithSpacing.space24),
+            emptyStateView.trailingAnchor.constraint(lessThanOrEqualTo: view.trailingAnchor, constant: -WraithSpacing.space24)
         ])
     }
 
     private func reload() {
         trips = TripStore.shared.loadTrips()
-        tableView.backgroundView = trips.isEmpty ? emptyStateView : nil
+        emptyStateView.isHidden = !trips.isEmpty
         tableView.reloadData()
     }
 
+    /// A trip saved from Home now carries full stop data (see `TripSummaryViewModel.saveBrowsedTrip`),
+    /// same as a manually-created one — so stops are always the source of truth here when
+    /// present, and `browsedTripPreview` is only a fallback for the rare case a trip somehow
+    /// has none (or supplies extras, like `rating`, that stops don't carry at all).
     private func title(for trip: SavedTrip) -> String {
-        if let preview = trip.browsedTripPreview { return preview.title }
-
         let cityNames = trip.stops.compactMap { $0.cityName }
-        guard !cityNames.isEmpty else { return "Seyahat" }
-        return cityNames.joined(separator: " → ")
+        if !cityNames.isEmpty { return cityNames.joined(separator: " → ") }
+        if let preview = trip.browsedTripPreview { return preview.title }
+        return "Seyahat"
     }
 
     private func subtitle(for trip: SavedTrip) -> String {
+        if let start = trip.stops.first?.startDate, let end = trip.stops.last?.endDate {
+            return "\(Self.dateFormatter.string(from: start)) - \(Self.dateFormatter.string(from: end))"
+        }
         if let preview = trip.browsedTripPreview {
             return "\(preview.durationText) · \(preview.price) \(preview.currency)"
         }
-
-        guard
-            let start = trip.stops.first?.startDate,
-            let end = trip.stops.last?.endDate
-        else {
-            return "Seyahat"
-        }
-        return "\(Self.dateFormatter.string(from: start)) - \(Self.dateFormatter.string(from: end))"
+        return "Seyahat"
     }
 
     private func icon(for trip: SavedTrip) -> String {
-        if trip.browsedTripPreview != nil { return "map.fill" }
-        return trip.stops.first?.transportType.iconName ?? "airplane"
+        if let transportType = trip.stops.first?.transportType { return transportType.iconName }
+        return trip.browsedTripPreview != nil ? "map.fill" : "airplane"
     }
 
     private func chips(for trip: SavedTrip) -> [TripCardView.Chip] {
         var chips: [TripCardView.Chip] = []
 
-        if let preview = trip.browsedTripPreview {
-            chips.append(TripCardView.Chip(icon: "star.fill", text: String(format: "%.1f (%d)", preview.rating, preview.reviewCount)))
-            chips.append(TripCardView.Chip(icon: "calendar", text: preview.durationText))
-            chips.append(TripCardView.Chip(icon: "banknote.fill", text: "\(preview.price) \(preview.currency)"))
-        } else {
+        if !trip.stops.isEmpty {
             if let travelerCount = trip.stops.first?.travelerCount, travelerCount > 0 {
                 let text = travelerCount == 1 ? "1 kişi" : "\(travelerCount) kişi"
                 chips.append(TripCardView.Chip(icon: "person.2.fill", text: text))
             }
-            if !trip.stops.isEmpty {
-                let text = trip.stops.count == 1 ? "1 durak" : "\(trip.stops.count) durak"
-                chips.append(TripCardView.Chip(icon: "mappin.and.ellipse", text: text))
-            }
+            let stopText = trip.stops.count == 1 ? "1 durak" : "\(trip.stops.count) durak"
+            chips.append(TripCardView.Chip(icon: "mappin.and.ellipse", text: stopText))
+
             if let start = trip.stops.first?.startDate, let end = trip.stops.last?.endDate {
                 // Every stop's own date range is contiguous with the next, so the first
                 // stop's start to the last stop's end covers the whole trip.
@@ -179,17 +126,14 @@ final class MyTripsViewController: UIViewController {
             // detailed plan PDF has been generated, which left most trips with no price chip
             // at all — falling back to the same locally-computed sum TripSummaryViewModel
             // uses means every trip with stops shows a price consistently.
-            if !trip.stops.isEmpty {
-                let amount = TripSummaryViewModel(trip: trip).totalCost
-                if amount > 0 {
-                    let currency = trip.estimatedTotalCostCurrency ?? trip.stops.first?.hotels.first?.currency ?? "TL"
-                    chips.append(TripCardView.Chip(icon: "banknote.fill", text: "\(amount) \(currency)"))
-                }
+            let amount = TripSummaryViewModel(trip: trip).totalCost
+            if amount > 0 {
+                let currency = trip.estimatedTotalCostCurrency ?? trip.stops.first?.hotels.first?.currency ?? "TL"
+                chips.append(TripCardView.Chip(icon: "banknote.fill", text: "\(amount) \(currency)"))
             }
-        }
-
-        if trip.isPublic {
-            chips.append(TripCardView.Chip(icon: "globe", text: "Herkese Açık"))
+        } else if let preview = trip.browsedTripPreview {
+            chips.append(TripCardView.Chip(icon: "calendar", text: preview.durationText))
+            chips.append(TripCardView.Chip(icon: "banknote.fill", text: "\(preview.price) \(preview.currency)"))
         }
 
         return chips
@@ -236,7 +180,7 @@ extension MyTripsViewController: UITableViewDelegate {
 
         if trips.isEmpty {
             tableView.reloadData()
-            tableView.backgroundView = emptyStateView
+            emptyStateView.isHidden = false
         } else {
             tableView.deleteRows(at: [indexPath], with: .automatic)
         }

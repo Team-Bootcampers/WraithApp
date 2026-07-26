@@ -16,16 +16,11 @@ final class HomeViewModel {
     private(set) var isLoading = false
 
     var onStateChange: (() -> Void)?
-    var onFavoriteToggled: ((String) -> Void)?
 
     private let service: PopularTripsServiceProtocol
     private var activeQuery: String?
     private var loadTask: Task<Void, Never>?
     private var searchDebounceTask: Task<Void, Never>?
-    /// The mock/backend always reports `isFavorite: false`, so favorite state has to be
-    /// tracked locally and re-applied to every freshly fetched list — otherwise a toggle
-    /// gets silently wiped out the next time `refresh()` runs (e.g. after a sort change).
-    private var favoriteTripIDs: Set<String> = []
 
     private static let minimumSearchLength = 3
     private static let searchDebounceNanoseconds: UInt64 = 450_000_000
@@ -82,22 +77,6 @@ final class HomeViewModel {
         }
     }
 
-    /// Deliberately does not go through `onStateChange` (which triggers a full list reload) —
-    /// only the tapped card's visual state should change, so this fires a dedicated,
-    /// single-row-scoped callback instead.
-    func toggleFavorite(for trip: PopularTrip) {
-        guard let index = trips.firstIndex(where: { $0.id == trip.id }) else { return }
-        trips[index].isFavorite.toggle()
-
-        if trips[index].isFavorite {
-            favoriteTripIDs.insert(trip.id)
-        } else {
-            favoriteTripIDs.remove(trip.id)
-        }
-
-        onFavoriteToggled?(trip.id)
-    }
-
     // MARK: - Private
 
     private func sortTripsLocally() {
@@ -109,13 +88,9 @@ final class HomeViewModel {
         case .rating:
             trips.sort { $0.rating > $1.rating }
         case .personalized:
-            // No real recommendation signal yet, so favorited trips are surfaced first and
-            // the rest falls back to popularity — a placeholder until the API exposes an
-            // actual personalization score.
-            trips.sort {
-                if $0.isFavorite != $1.isFavorite { return $0.isFavorite }
-                return $0.popularityScore > $1.popularityScore
-            }
+            // No real recommendation signal yet — falls back to popularity as a placeholder
+            // until the API exposes an actual personalization score.
+            trips.sort { $0.popularityScore > $1.popularityScore }
         }
     }
 
@@ -141,11 +116,7 @@ final class HomeViewModel {
                 completion?()
                 return
             }
-            self.trips = trips.map { trip in
-                var trip = trip
-                trip.isFavorite = self.favoriteTripIDs.contains(trip.id)
-                return trip
-            }
+            self.trips = trips
             self.isLoading = false
             self.onStateChange?()
             completion?()

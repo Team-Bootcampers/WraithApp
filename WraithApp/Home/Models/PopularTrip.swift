@@ -20,7 +20,6 @@ struct PopularTrip {
     let price: Int
     let currency: String
     let popularityScore: Int
-    var isFavorite: Bool
     /// The trip's actual stops (country/city, dates, transport, hotels/attractions/restaurants)
     /// as returned by `GET /trips` — carried through so the detail screen can show everything,
     /// not just the card summary.

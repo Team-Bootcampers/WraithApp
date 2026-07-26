@@ -80,17 +80,11 @@ final class HomeViewController: UIViewController {
         return indicator
     }()
 
-    private lazy var emptyStateLabel: UILabel = {
-        let label = UILabel()
-        label.text = "Sonuç bulunamadı"
-        label.font = .systemFont(ofSize: 15, weight: .medium)
-        label.textColor = .wraithOnSurfaceVariant
-        label.textAlignment = .center
-        label.numberOfLines = 0
-        label.isHidden = true
-        label.translatesAutoresizingMaskIntoConstraints = false
-        return label
-    }()
+    private lazy var emptyStateView = EmptyStateView(
+        iconSystemName: "magnifyingglass",
+        title: "Sonuç bulunamadı",
+        subtitle: "Farklı bir arama terimi ya da filtre deneyebilirsin."
+    )
 
     // MARK: - Properties
 
@@ -126,7 +120,7 @@ final class HomeViewController: UIViewController {
         view.addSubview(headerStackView)
         view.addSubview(tableView)
         view.addSubview(loadingIndicator)
-        view.addSubview(emptyStateLabel)
+        view.addSubview(emptyStateView)
 
         sortButtons.first?.isSelected = true
 
@@ -143,10 +137,10 @@ final class HomeViewController: UIViewController {
             loadingIndicator.centerXAnchor.constraint(equalTo: tableView.centerXAnchor),
             loadingIndicator.topAnchor.constraint(equalTo: tableView.topAnchor, constant: WraithSpacing.space40),
 
-            emptyStateLabel.centerXAnchor.constraint(equalTo: tableView.centerXAnchor),
-            emptyStateLabel.topAnchor.constraint(equalTo: tableView.topAnchor, constant: WraithSpacing.space40),
-            emptyStateLabel.leadingAnchor.constraint(greaterThanOrEqualTo: view.leadingAnchor, constant: WraithSpacing.space20),
-            emptyStateLabel.trailingAnchor.constraint(lessThanOrEqualTo: view.trailingAnchor, constant: -WraithSpacing.space20)
+            emptyStateView.centerXAnchor.constraint(equalTo: tableView.centerXAnchor),
+            emptyStateView.centerYAnchor.constraint(equalTo: tableView.centerYAnchor, constant: -WraithSpacing.space40),
+            emptyStateView.leadingAnchor.constraint(greaterThanOrEqualTo: view.leadingAnchor, constant: WraithSpacing.space24),
+            emptyStateView.trailingAnchor.constraint(lessThanOrEqualTo: view.trailingAnchor, constant: -WraithSpacing.space24)
         ])
     }
 
@@ -162,16 +156,10 @@ final class HomeViewController: UIViewController {
             } else {
                 self.loadingIndicator.stopAnimating()
             }
-            self.emptyStateLabel.isHidden = self.viewModel.isLoading || !self.viewModel.trips.isEmpty
-        }
-
-        // Scoped to a single row so toggling one card's favorite state never touches the
-        // visuals of any other on-screen cell.
-        viewModel.onFavoriteToggled = { [weak self] tripID in
-            guard let self, let index = self.viewModel.trips.firstIndex(where: { $0.id == tripID }) else { return }
-            let indexPath = IndexPath(row: index, section: 0)
-            guard let cell = self.tableView.cellForRow(at: indexPath) as? PopularTripCell else { return }
-            cell.setFavorite(self.viewModel.trips[index].isFavorite)
+            let hasNoContent = !self.viewModel.isLoading && self.viewModel.trips.isEmpty
+            self.emptyStateView.isHidden = !hasNoContent
+            // Sorting an empty result set makes no sense — hide the sort pills along with it.
+            self.sortButtonsStackView.isHidden = hasNoContent
         }
     }
 
@@ -200,7 +188,6 @@ extension HomeViewController: UITableViewDataSource, UITableViewDelegate {
         let cell = tableView.dequeueReusableCell(withIdentifier: PopularTripCell.reuseIdentifier, for: indexPath) as! PopularTripCell
         let trip = viewModel.trips[indexPath.row]
         cell.configure(with: trip)
-        cell.onFavoriteTap = { [weak self] in self?.viewModel.toggleFavorite(for: trip) }
         return cell
     }
 

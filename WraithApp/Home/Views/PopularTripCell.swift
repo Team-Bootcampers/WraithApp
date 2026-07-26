@@ -58,18 +58,6 @@ final class PopularTripCell: UITableViewCell {
         return view
     }()
 
-    private lazy var favoriteButton: UIButton = {
-        var configuration = UIButton.Configuration.plain()
-        configuration.image = UIImage(systemName: "heart")
-        configuration.baseForegroundColor = .wraithOnPrimary
-        let button = UIButton(configuration: configuration)
-        button.backgroundColor = .wraithPhotoScrimLight
-        button.layer.cornerRadius = WraithRadius.radius18
-        button.translatesAutoresizingMaskIntoConstraints = false
-        button.addTarget(self, action: #selector(didTapFavorite), for: .touchUpInside)
-        return button
-    }()
-
     private lazy var titleLabel: UILabel = {
         let label = UILabel()
         label.font = .systemFont(ofSize: 20, weight: .bold)
@@ -224,8 +212,6 @@ final class PopularTripCell: UITableViewCell {
 
     // MARK: - Properties
 
-    var onFavoriteTap: (() -> Void)?
-
     private static let priceFormatter: NumberFormatter = {
         let formatter = NumberFormatter()
         formatter.numberStyle = .decimal
@@ -258,7 +244,6 @@ final class PopularTripCell: UITableViewCell {
         textContainerView.addSubview(textStackView)
         imageContainerView.addSubview(photoImageView)
         imageContainerView.addSubview(gradientOverlayView)
-        imageContainerView.addSubview(favoriteButton)
         imageContainerView.addSubview(overlayTextStackView)
 
         NSLayoutConstraint.activate([
@@ -295,11 +280,6 @@ final class PopularTripCell: UITableViewCell {
             gradientOverlayView.trailingAnchor.constraint(equalTo: imageContainerView.trailingAnchor),
             gradientOverlayView.bottomAnchor.constraint(equalTo: imageContainerView.bottomAnchor),
             gradientOverlayView.heightAnchor.constraint(equalTo: imageContainerView.heightAnchor, multiplier: 0.65),
-
-            favoriteButton.topAnchor.constraint(equalTo: imageContainerView.topAnchor, constant: WraithSpacing.space12),
-            favoriteButton.trailingAnchor.constraint(equalTo: imageContainerView.trailingAnchor, constant: -WraithSpacing.space12),
-            favoriteButton.widthAnchor.constraint(equalToConstant: 36),
-            favoriteButton.heightAnchor.constraint(equalToConstant: 36),
 
             overlayTextStackView.leadingAnchor.constraint(equalTo: imageContainerView.leadingAnchor, constant: WraithSpacing.space16),
             overlayTextStackView.trailingAnchor.constraint(lessThanOrEqualTo: imageContainerView.trailingAnchor, constant: -WraithSpacing.space16),
@@ -353,8 +333,6 @@ final class PopularTripCell: UITableViewCell {
         durationLabel.text = nil
         descriptionLabel.text = nil
         priceLabel.text = nil
-        onFavoriteTap = nil
-        setFavorite(false)
     }
 
     // MARK: - Public
@@ -367,19 +345,6 @@ final class PopularTripCell: UITableViewCell {
         durationLabel.text = trip.durationText
         descriptionLabel.text = trip.description
         priceLabel.text = formattedPrice(trip.price, currency: trip.currency)
-        setFavorite(trip.isFavorite)
-    }
-
-    // MARK: - Public
-
-    func setFavorite(_ isFavorite: Bool) {
-        // Reused cells must not inherit an in-flight symbol cross-fade from whatever trip
-        // the cell last displayed, so state changes on reuse/configure apply instantly.
-        UIView.performWithoutAnimation {
-            favoriteButton.configuration?.image = UIImage(systemName: isFavorite ? "heart.fill" : "heart")
-            favoriteButton.configuration?.baseForegroundColor = isFavorite ? .wraithPrimary : .wraithOnPrimary
-            favoriteButton.layoutIfNeeded()
-        }
     }
 
     // MARK: - Private
@@ -387,12 +352,6 @@ final class PopularTripCell: UITableViewCell {
     private func formattedPrice(_ price: Int, currency: String) -> String {
         let formatted = Self.priceFormatter.string(from: NSNumber(value: price)) ?? "\(price)"
         return "\(formatted) \(currency)"
-    }
-
-    // MARK: - Actions
-
-    @objc private func didTapFavorite() {
-        onFavoriteTap?()
     }
 }
 

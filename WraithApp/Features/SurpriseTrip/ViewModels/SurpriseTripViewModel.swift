@@ -83,7 +83,13 @@ final class SurpriseTripViewModel {
         )
 
         let response = try await SurpriseTripAPI.plan(request: request, token: UserSession.shared.idToken)
-        let plan = Self.makePlan(from: response, travelerCount: travelerCount, budgetPerPerson: budgetPerPerson)
+        // The backend returns country *names* in Turkish (e.g. "Sırbistan") for the picked
+        // destination — the trip create/plan endpoints require a non-empty ISO2 per stop, so
+        // it's resolved here against iOS's own Turkish locale data rather than
+        // `CountryCityService` (whose names come from countriesnow.space in English, so they
+        // wouldn't match).
+        let countryISO2ByName = Self.turkishCountryISO2Lookup
+        let plan = Self.makePlan(from: response, travelerCount: travelerCount, budgetPerPerson: budgetPerPerson, countryISO2ByName: countryISO2ByName)
         self.plan = plan
         return plan
     }
@@ -100,12 +106,26 @@ final class SurpriseTripViewModel {
 
     // MARK: - Mapping
 
-    private static func makePlan(from response: SurpriseTripResponseDto, travelerCount: Int, budgetPerPerson: Int) -> ItineraryPlan {
+    /// Turkish country name (lowercased) → ISO2, built from iOS's own locale data instead of
+    /// a network call — every ISO2 region code's Turkish-localized name is generated and
+    /// matched against, so this works offline and regardless of what language the backend
+    /// happens to answer in for the country name itself.
+    private static let turkishCountryISO2Lookup: [String: String] = {
+        let turkishLocale = Locale(identifier: "tr_TR")
+        var lookup: [String: String] = [:]
+        for iso2 in Locale.isoRegionCodes {
+            guard let name = turkishLocale.localizedString(forRegionCode: iso2) else { continue }
+            lookup[name.lowercased()] = iso2
+        }
+        return lookup
+    }()
+
+    private static func makePlan(from response: SurpriseTripResponseDto, travelerCount: Int, budgetPerPerson: Int, countryISO2ByName: [String: String]) -> ItineraryPlan {
         let reveal = response.destinationReveal
         let destination = Destination(
             cityName: reveal.cityName,
             countryName: reveal.countryName,
-            iso2: "",
+            iso2: countryISO2ByName[reveal.countryName.lowercased()] ?? "",
             tagline: reveal.teaserTitle,
             climateHint: response.stops.first?.weatherForecastHint ?? reveal.whyThisPlace,
             travelHint: response.stops.first?.localTips.first ?? response.tripSummary,
@@ -122,7 +142,7 @@ final class SurpriseTripViewModel {
             TripStopSnapshot(
                 stopNumber: stopDto.stopNumber,
                 departureCityName: departureCityName,
-                country: Country(name: stopDto.countryName, iso2: "", flagURL: nil),
+                country: Country(name: stopDto.countryName, iso2: countryISO2ByName[stopDto.countryName.lowercased()] ?? "", flagURL: nil),
                 cityName: stopDto.cityName,
                 travelerCount: travelerCount,
                 startDate: dateFormatter.date(from: stopDto.arrivalDate),
