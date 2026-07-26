@@ -76,6 +76,14 @@ final class TripCreationViewController: UIViewController {
         super.viewDidLoad()
         view.backgroundColor = .wraithBackground
         title = existingTrip == nil ? "Yeni Seyahat" : "Seyahati Düzenle"
+        if existingTrip == nil {
+            navigationItem.rightBarButtonItem = UIBarButtonItem(
+                title: "Temizle",
+                style: .plain,
+                target: self,
+                action: #selector(didTapClear)
+            )
+        }
         setupLayout()
         if initialStopSnapshots.isEmpty {
             addStop()
@@ -233,6 +241,19 @@ final class TripCreationViewController: UIViewController {
     private func didTapAddStop() {
         addStop()
         updateSaveButtonState()
+    }
+
+    @objc private func didTapClear() {
+        let alert = UIAlertController(
+            title: "Tüm Seçimleri Temizle",
+            message: "Girdiğin tüm durak bilgileri silinecek. Devam etmek istiyor musun?",
+            preferredStyle: .alert
+        )
+        alert.addAction(UIAlertAction(title: "Temizle", style: .destructive) { [weak self] _ in
+            self?.resetForm()
+        })
+        alert.addAction(UIAlertAction(title: "Vazgeç", style: .cancel))
+        present(alert, animated: true)
     }
 
     @objc private func didTapSave() {
