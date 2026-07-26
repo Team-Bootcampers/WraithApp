@@ -17,19 +17,19 @@ final class MyTripsViewController: UIViewController {
         return formatter
     }()
 
-    private let scrollView: UIScrollView = {
-        let scrollView = UIScrollView()
-        scrollView.translatesAutoresizingMaskIntoConstraints = false
-        scrollView.showsVerticalScrollIndicator = false
-        return scrollView
-    }()
-
-    private let tripsStackView: UIStackView = {
-        let stack = UIStackView()
-        stack.translatesAutoresizingMaskIntoConstraints = false
-        stack.axis = .vertical
-        stack.spacing = WraithSpacing.space12
-        return stack
+    private lazy var tableView: UITableView = {
+        let tableView = UITableView(frame: .zero, style: .plain)
+        tableView.translatesAutoresizingMaskIntoConstraints = false
+        tableView.backgroundColor = .wraithBackground
+        tableView.separatorStyle = .none
+        tableView.showsVerticalScrollIndicator = false
+        tableView.rowHeight = UITableView.automaticDimension
+        tableView.estimatedRowHeight = 120
+        tableView.contentInset = UIEdgeInsets(top: WraithSpacing.space16, left: 0, bottom: WraithSpacing.space16, right: 0)
+        tableView.register(TripCardTableViewCell.self, forCellReuseIdentifier: TripCardTableViewCell.reuseIdentifier)
+        tableView.dataSource = self
+        tableView.delegate = self
+        return tableView
     }()
 
     private let emptyIconContainerView: UIView = {
@@ -75,7 +75,7 @@ final class MyTripsViewController: UIViewController {
         [emptyIconContainerView, emptyTitleLabel, emptySubtitleLabel].forEach { container.addSubview($0) }
 
         NSLayoutConstraint.activate([
-            emptyIconContainerView.topAnchor.constraint(equalTo: container.topAnchor),
+            emptyIconContainerView.centerYAnchor.constraint(equalTo: container.centerYAnchor, constant: -WraithSpacing.space60),
             emptyIconContainerView.centerXAnchor.constraint(equalTo: container.centerXAnchor),
             emptyIconContainerView.widthAnchor.constraint(equalToConstant: 76),
             emptyIconContainerView.heightAnchor.constraint(equalToConstant: 76),
@@ -90,12 +90,13 @@ final class MyTripsViewController: UIViewController {
 
             emptySubtitleLabel.topAnchor.constraint(equalTo: emptyTitleLabel.bottomAnchor, constant: WraithSpacing.space8),
             emptySubtitleLabel.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: WraithSpacing.space24),
-            emptySubtitleLabel.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -WraithSpacing.space24),
-            emptySubtitleLabel.bottomAnchor.constraint(equalTo: container.bottomAnchor)
+            emptySubtitleLabel.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -WraithSpacing.space24)
         ])
 
         return container
     }()
+
+    private var trips: [SavedTrip] = []
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -110,42 +111,19 @@ final class MyTripsViewController: UIViewController {
     }
 
     private func setupLayout() {
-        view.addSubview(scrollView)
-        scrollView.addSubview(tripsStackView)
-
+        view.addSubview(tableView)
         NSLayoutConstraint.activate([
-            scrollView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
-            scrollView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            scrollView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            scrollView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor),
-
-            tripsStackView.topAnchor.constraint(equalTo: scrollView.topAnchor, constant: WraithSpacing.space16),
-            tripsStackView.leadingAnchor.constraint(equalTo: scrollView.leadingAnchor, constant: WraithSpacing.space24),
-            tripsStackView.trailingAnchor.constraint(equalTo: scrollView.trailingAnchor, constant: -WraithSpacing.space24),
-            tripsStackView.bottomAnchor.constraint(equalTo: scrollView.bottomAnchor, constant: -WraithSpacing.space24),
-            tripsStackView.widthAnchor.constraint(equalTo: scrollView.widthAnchor, constant: -WraithSpacing.space24 * 2)
+            tableView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
+            tableView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            tableView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            tableView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor)
         ])
     }
 
     private func reload() {
-        tripsStackView.arrangedSubviews.forEach { $0.removeFromSuperview() }
-
-        let trips = TripStore.shared.loadTrips()
-        guard !trips.isEmpty else {
-            tripsStackView.addArrangedSubview(emptyStateView)
-            NSLayoutConstraint.activate([
-                emptyStateView.topAnchor.constraint(equalTo: tripsStackView.topAnchor, constant: WraithSpacing.space80)
-            ])
-            return
-        }
-
-        for trip in trips {
-            let card = TripCardView()
-            card.configure(title: title(for: trip), subtitle: subtitle(for: trip))
-            card.addTarget(self, action: #selector(didTapTrip(_:)), for: .touchUpInside)
-            card.tag = trips.firstIndex(where: { $0.id == trip.id }) ?? 0
-            tripsStackView.addArrangedSubview(card)
-        }
+        trips = TripStore.shared.loadTrips()
+        tableView.backgroundView = trips.isEmpty ? emptyStateView : nil
+        tableView.reloadData()
     }
 
     private func title(for trip: SavedTrip) -> String {
@@ -161,21 +139,111 @@ final class MyTripsViewController: UIViewController {
             return "\(preview.durationText) · \(preview.price) \(preview.currency)"
         }
 
-        let stopCountText = trip.stops.count == 1 ? "1 durak" : "\(trip.stops.count) durak"
         guard
             let start = trip.stops.first?.startDate,
             let end = trip.stops.last?.endDate
         else {
-            return stopCountText
+            return "Seyahat"
         }
-        let dateText = "\(Self.dateFormatter.string(from: start)) - \(Self.dateFormatter.string(from: end))"
-        return "\(stopCountText) · \(dateText)"
+        return "\(Self.dateFormatter.string(from: start)) - \(Self.dateFormatter.string(from: end))"
     }
 
-    @objc private func didTapTrip(_ sender: TripCardView) {
-        let trips = TripStore.shared.loadTrips()
-        guard trips.indices.contains(sender.tag) else { return }
-        let summaryViewModel = TripSummaryViewModel(trip: trips[sender.tag])
+    private func icon(for trip: SavedTrip) -> String {
+        if trip.browsedTripPreview != nil { return "map.fill" }
+        return trip.stops.first?.transportType.iconName ?? "airplane"
+    }
+
+    private func chips(for trip: SavedTrip) -> [TripCardView.Chip] {
+        var chips: [TripCardView.Chip] = []
+
+        if let preview = trip.browsedTripPreview {
+            chips.append(TripCardView.Chip(icon: "star.fill", text: String(format: "%.1f (%d)", preview.rating, preview.reviewCount)))
+            chips.append(TripCardView.Chip(icon: "calendar", text: preview.durationText))
+            chips.append(TripCardView.Chip(icon: "banknote.fill", text: "\(preview.price) \(preview.currency)"))
+        } else {
+            if let travelerCount = trip.stops.first?.travelerCount, travelerCount > 0 {
+                let text = travelerCount == 1 ? "1 kişi" : "\(travelerCount) kişi"
+                chips.append(TripCardView.Chip(icon: "person.2.fill", text: text))
+            }
+            if !trip.stops.isEmpty {
+                let text = trip.stops.count == 1 ? "1 durak" : "\(trip.stops.count) durak"
+                chips.append(TripCardView.Chip(icon: "mappin.and.ellipse", text: text))
+            }
+            if let start = trip.stops.first?.startDate, let end = trip.stops.last?.endDate {
+                // Every stop's own date range is contiguous with the next, so the first
+                // stop's start to the last stop's end covers the whole trip.
+                let days = max(Calendar.current.dateComponents([.day], from: start, to: end).day ?? 0, 0) + 1
+                chips.append(TripCardView.Chip(icon: "calendar", text: days == 1 ? "1 gün" : "\(days) gün"))
+            }
+            // The AI-generated estimate (`estimatedTotalCostAmount`) only exists once a
+            // detailed plan PDF has been generated, which left most trips with no price chip
+            // at all — falling back to the same locally-computed sum TripSummaryViewModel
+            // uses means every trip with stops shows a price consistently.
+            if !trip.stops.isEmpty {
+                let amount = TripSummaryViewModel(trip: trip).totalCost
+                if amount > 0 {
+                    let currency = trip.estimatedTotalCostCurrency ?? trip.stops.first?.hotels.first?.currency ?? "TL"
+                    chips.append(TripCardView.Chip(icon: "banknote.fill", text: "\(amount) \(currency)"))
+                }
+            }
+        }
+
+        if trip.isPublic {
+            chips.append(TripCardView.Chip(icon: "globe", text: "Herkese Açık"))
+        }
+
+        return chips
+    }
+}
+
+// MARK: - UITableViewDataSource
+
+extension MyTripsViewController: UITableViewDataSource {
+
+    func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+        trips.count
+    }
+
+    func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+        guard let cell = tableView.dequeueReusableCell(withIdentifier: TripCardTableViewCell.reuseIdentifier, for: indexPath) as? TripCardTableViewCell else {
+            return UITableViewCell()
+        }
+        let trip = trips[indexPath.row]
+        cell.configure(icon: icon(for: trip), title: title(for: trip), subtitle: subtitle(for: trip), chips: chips(for: trip)) { [weak self] in
+            self?.showSummary(for: trip)
+        }
+        return cell
+    }
+}
+
+// MARK: - UITableViewDelegate
+
+extension MyTripsViewController: UITableViewDelegate {
+
+    func tableView(_ tableView: UITableView, trailingSwipeActionsConfigurationForRowAt indexPath: IndexPath) -> UISwipeActionsConfiguration? {
+        let deleteAction = UIContextualAction(style: .destructive, title: "Sil") { [weak self] _, _, completion in
+            self?.deleteTrip(at: indexPath)
+            completion(true)
+        }
+        deleteAction.image = UIImage(systemName: "trash.fill")
+        return UISwipeActionsConfiguration(actions: [deleteAction])
+    }
+
+    private func deleteTrip(at indexPath: IndexPath) {
+        let trip = trips[indexPath.row]
+        TripStore.shared.remove(trip.id)
+        trips.remove(at: indexPath.row)
+
+        if trips.isEmpty {
+            tableView.reloadData()
+            tableView.backgroundView = emptyStateView
+        } else {
+            tableView.deleteRows(at: [indexPath], with: .automatic)
+        }
+    }
+
+    private func showSummary(for trip: SavedTrip) {
+        let summaryViewModel = TripSummaryViewModel(trip: trip)
         let summaryViewController = TripSummaryViewController(viewModel: summaryViewModel)
         navigationController?.pushViewController(summaryViewController, animated: true)
     }
