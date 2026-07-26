@@ -50,6 +50,26 @@ final class TripSummaryViewController: UIViewController {
         return button
     }()
 
+    private lazy var planPDFButton: UIButton = {
+        var configuration = UIButton.Configuration.filled()
+        configuration.title = "Detaylı Gezi Planı"
+        configuration.image = UIImage(systemName: "doc.text.fill")
+        configuration.imagePadding = 8
+        configuration.baseBackgroundColor = .wraithSecondary
+        configuration.baseForegroundColor = .wraithOnSurface
+        configuration.cornerStyle = .large
+        configuration.titleTextAttributesTransformer = UIConfigurationTextAttributesTransformer { incoming in
+            var outgoing = incoming
+            outgoing.font = .systemFont(ofSize: 17, weight: .semibold)
+            return outgoing
+        }
+        let button = UIButton(configuration: configuration)
+        button.translatesAutoresizingMaskIntoConstraints = false
+        button.heightAnchor.constraint(equalToConstant: 52).isActive = true
+        button.addTarget(self, action: #selector(didTapViewPlan), for: .touchUpInside)
+        return button
+    }()
+
     // MARK: - Properties
 
     private let viewModel: TripSummaryViewModel
@@ -91,6 +111,9 @@ final class TripSummaryViewController: UIViewController {
         }
 
         contentStackView.addArrangedSubview(totalCostView)
+        if viewModel.tripPlanPDFURL != nil {
+            contentStackView.addArrangedSubview(planPDFButton)
+        }
         contentStackView.addArrangedSubview(purchaseButton)
 
         NSLayoutConstraint.activate([
@@ -116,6 +139,11 @@ final class TripSummaryViewController: UIViewController {
         } else {
             present(UINavigationController(rootViewController: editViewController), animated: true)
         }
+    }
+
+    @objc private func didTapViewPlan() {
+        guard let url = viewModel.tripPlanPDFURL else { return }
+        navigationController?.pushViewController(PDFViewerViewController(fileURL: url), animated: true)
     }
 
     @objc private func didTapPurchase() {
