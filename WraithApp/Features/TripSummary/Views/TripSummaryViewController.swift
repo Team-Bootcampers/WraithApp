@@ -82,6 +82,7 @@ final class TripSummaryViewController: UIViewController {
 
     private let viewModel: TripSummaryViewModel
     private let publishingService: TripPublishingServiceProtocol
+    private var authCoordinator: AuthCoordinator?
 
     // MARK: - Init
 
@@ -180,6 +181,16 @@ final class TripSummaryViewController: UIViewController {
     @objc private func didTapMakePublic() {
         guard let savedTrip = viewModel.savedTrip else { return }
 
+        guard UserSession.shared.isLoggedIn else {
+            // `AuthCoordinator.onFinished` fires the same way whether the user logged in or
+            // just closed the sheet, so re-checking the session afterward is the only way to
+            // tell success from cancel — if it succeeded, resume this exact action.
+            presentLogin { [weak self] in
+                self?.didTapMakePublic()
+            }
+            return
+        }
+
         if savedTrip.isPublic {
             confirmUnpublish(tripID: savedTrip.id)
         } else {
@@ -188,6 +199,18 @@ final class TripSummaryViewController: UIViewController {
     }
 
     // MARK: - Private
+
+    private func presentLogin(onLoggedIn: @escaping () -> Void) {
+        let coordinator = AuthCoordinator(presentingViewController: self)
+        coordinator.onFinished = { [weak self] in
+            self?.authCoordinator = nil
+            if UserSession.shared.isLoggedIn {
+                onLoggedIn()
+            }
+        }
+        authCoordinator = coordinator
+        coordinator.start()
+    }
 
     private func publicButtonConfiguration(isPublic: Bool) -> UIButton.Configuration {
         var configuration = UIButton.Configuration.filled()
