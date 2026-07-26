@@ -61,7 +61,7 @@ final class TravelIdentityViewController: UIViewController {
         let view = UIView()
         view.translatesAutoresizingMaskIntoConstraints = false
         view.backgroundColor = .wraithSurfaceVariant
-        view.layer.cornerRadius = 16
+        view.layer.cornerRadius = WraithRadius.radius16
         view.clipsToBounds = true
         return view
     }()
@@ -98,9 +98,14 @@ final class TravelIdentityViewController: UIViewController {
         config.title = "Profili Düzenle"
         config.baseForegroundColor = .wraithPrimary
         config.background.strokeColor = .wraithPrimary
-        config.background.strokeWidth = 1.5
+        config.background.strokeWidth = WraithBorderWidth.emphasized
         config.cornerStyle = .capsule
-        config.contentInsets = NSDirectionalEdgeInsets(top: 18, leading: 32, bottom: 18, trailing: 32)
+        config.contentInsets = NSDirectionalEdgeInsets(
+            top: WraithSpacing.space18,
+            leading: WraithSpacing.space32,
+            bottom: WraithSpacing.space18,
+            trailing: WraithSpacing.space32
+        )
         button.configuration = config
         button.translatesAutoresizingMaskIntoConstraints = false
         return button
@@ -140,7 +145,7 @@ final class TravelIdentityViewController: UIViewController {
     // MARK: - Setup
 
     private func setupContent() {
-        titleLabel.text = "Siz Bir \"\(result.title)\"siniz!"
+        titleLabel.text = result.title
         summaryLabel.text = result.summary
         insightTitleLabel.text = result.insightTitle
         insightDescriptionLabel.text = result.insightDescription
@@ -181,48 +186,48 @@ final class TravelIdentityViewController: UIViewController {
             contentView.bottomAnchor.constraint(equalTo: scrollView.bottomAnchor),
             contentView.widthAnchor.constraint(equalTo: scrollView.widthAnchor),
 
-            kickerLabel.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 40),
+            kickerLabel.topAnchor.constraint(equalTo: contentView.topAnchor, constant: WraithSpacing.space40),
             kickerLabel.centerXAnchor.constraint(equalTo: contentView.centerXAnchor),
 
-            dividerView.topAnchor.constraint(equalTo: kickerLabel.bottomAnchor, constant: 14),
+            dividerView.topAnchor.constraint(equalTo: kickerLabel.bottomAnchor, constant: WraithSpacing.space14),
             dividerView.centerXAnchor.constraint(equalTo: contentView.centerXAnchor),
             dividerView.widthAnchor.constraint(equalToConstant: 40),
             dividerView.heightAnchor.constraint(equalToConstant: 2),
 
-            titleLabel.topAnchor.constraint(equalTo: dividerView.bottomAnchor, constant: 24),
-            titleLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 24),
-            titleLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -24),
+            titleLabel.topAnchor.constraint(equalTo: dividerView.bottomAnchor, constant: WraithSpacing.space24),
+            titleLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: WraithSpacing.space24),
+            titleLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -WraithSpacing.space24),
 
-            summaryLabel.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 12),
-            summaryLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 24),
-            summaryLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -24),
+            summaryLabel.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: WraithSpacing.space12),
+            summaryLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: WraithSpacing.space24),
+            summaryLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -WraithSpacing.space24),
 
-            insightCardView.topAnchor.constraint(equalTo: summaryLabel.bottomAnchor, constant: 32),
-            insightCardView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 24),
-            insightCardView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -24),
+            insightCardView.topAnchor.constraint(equalTo: summaryLabel.bottomAnchor, constant: WraithSpacing.space32),
+            insightCardView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: WraithSpacing.space24),
+            insightCardView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -WraithSpacing.space24),
 
             insightAccentView.topAnchor.constraint(equalTo: insightCardView.topAnchor),
             insightAccentView.leadingAnchor.constraint(equalTo: insightCardView.leadingAnchor),
             insightAccentView.bottomAnchor.constraint(equalTo: insightCardView.bottomAnchor),
             insightAccentView.widthAnchor.constraint(equalToConstant: 4),
 
-            insightTitleLabel.topAnchor.constraint(equalTo: insightCardView.topAnchor, constant: 20),
-            insightTitleLabel.leadingAnchor.constraint(equalTo: insightAccentView.trailingAnchor, constant: 16),
-            insightTitleLabel.trailingAnchor.constraint(equalTo: insightCardView.trailingAnchor, constant: -20),
+            insightTitleLabel.topAnchor.constraint(equalTo: insightCardView.topAnchor, constant: WraithSpacing.space20),
+            insightTitleLabel.leadingAnchor.constraint(equalTo: insightAccentView.trailingAnchor, constant: WraithSpacing.space16),
+            insightTitleLabel.trailingAnchor.constraint(equalTo: insightCardView.trailingAnchor, constant: -WraithSpacing.space20),
 
-            insightDescriptionLabel.topAnchor.constraint(equalTo: insightTitleLabel.bottomAnchor, constant: 10),
-            insightDescriptionLabel.leadingAnchor.constraint(equalTo: insightAccentView.trailingAnchor, constant: 16),
-            insightDescriptionLabel.trailingAnchor.constraint(equalTo: insightCardView.trailingAnchor, constant: -20),
-            insightDescriptionLabel.bottomAnchor.constraint(equalTo: insightCardView.bottomAnchor, constant: -20),
+            insightDescriptionLabel.topAnchor.constraint(equalTo: insightTitleLabel.bottomAnchor, constant: WraithSpacing.space10),
+            insightDescriptionLabel.leadingAnchor.constraint(equalTo: insightAccentView.trailingAnchor, constant: WraithSpacing.space16),
+            insightDescriptionLabel.trailingAnchor.constraint(equalTo: insightCardView.trailingAnchor, constant: -WraithSpacing.space20),
+            insightDescriptionLabel.bottomAnchor.constraint(equalTo: insightCardView.bottomAnchor, constant: -WraithSpacing.space20),
 
-            makeFirstPlanButton.topAnchor.constraint(equalTo: insightCardView.bottomAnchor, constant: 32),
-            makeFirstPlanButton.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 24),
-            makeFirstPlanButton.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -24),
+            makeFirstPlanButton.topAnchor.constraint(equalTo: insightCardView.bottomAnchor, constant: WraithSpacing.space32),
+            makeFirstPlanButton.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: WraithSpacing.space24),
+            makeFirstPlanButton.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -WraithSpacing.space24),
 
-            editProfileButton.topAnchor.constraint(equalTo: makeFirstPlanButton.bottomAnchor, constant: 12),
-            editProfileButton.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 24),
-            editProfileButton.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -24),
-            editProfileButton.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -32)
+            editProfileButton.topAnchor.constraint(equalTo: makeFirstPlanButton.bottomAnchor, constant: WraithSpacing.space12),
+            editProfileButton.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: WraithSpacing.space24),
+            editProfileButton.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -WraithSpacing.space24),
+            editProfileButton.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -WraithSpacing.space32)
         ])
     }
 

@@ -13,7 +13,7 @@ final class StepRowView: UIView {
         let view = UIView()
         view.translatesAutoresizingMaskIntoConstraints = false
         view.backgroundColor = UIColor.wraithPrimary.withAlphaComponent(0.1)
-        view.layer.cornerRadius = 18
+        view.layer.cornerRadius = WraithRadius.radius18
         return view
     }()
 
@@ -72,12 +72,12 @@ final class StepRowView: UIView {
             numberLabel.centerXAnchor.constraint(equalTo: numberBadgeView.centerXAnchor),
             numberLabel.centerYAnchor.constraint(equalTo: numberBadgeView.centerYAnchor),
 
-            titleLabel.topAnchor.constraint(equalTo: topAnchor, constant: 4),
-            titleLabel.leadingAnchor.constraint(equalTo: numberBadgeView.trailingAnchor, constant: 16),
+            titleLabel.topAnchor.constraint(equalTo: topAnchor, constant: WraithSpacing.space4),
+            titleLabel.leadingAnchor.constraint(equalTo: numberBadgeView.trailingAnchor, constant: WraithSpacing.space16),
             titleLabel.trailingAnchor.constraint(equalTo: trailingAnchor),
 
-            descriptionLabel.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 4),
-            descriptionLabel.leadingAnchor.constraint(equalTo: numberBadgeView.trailingAnchor, constant: 16),
+            descriptionLabel.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: WraithSpacing.space4),
+            descriptionLabel.leadingAnchor.constraint(equalTo: numberBadgeView.trailingAnchor, constant: WraithSpacing.space16),
             descriptionLabel.trailingAnchor.constraint(equalTo: trailingAnchor),
             descriptionLabel.bottomAnchor.constraint(equalTo: bottomAnchor)
         ])

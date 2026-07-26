@@ -32,7 +32,7 @@ final class OnboardingIntroViewController: UIViewController {
     private let appKickerLabel: UILabel = {
         let label = UILabel()
         label.translatesAutoresizingMaskIntoConstraints = false
-        label.text = "VOYAGE INSIGHT AI"
+        label.text = "VOYA AI"
         label.font = .systemFont(ofSize: 13, weight: .semibold)
         label.textColor = .wraithSecondary
         label.textAlignment = .center
@@ -60,7 +60,7 @@ final class OnboardingIntroViewController: UIViewController {
     private let appSubtitleLabel: UILabel = {
         let label = UILabel()
         label.translatesAutoresizingMaskIntoConstraints = false
-        label.text = "Voyage Insight AI, seyahat tarzını analiz ederek sana özel rotalar, konaklamalar ve deneyimler öneren yapay zeka destekli seyahat asistanındır."
+        label.text = "Voya, seyahat tarzını analiz ederek sana özel rotalar, konaklamalar ve deneyimler öneren yapay zeka destekli seyahat asistanındır."
         label.font = .systemFont(ofSize: 17, weight: .regular)
         label.textColor = .wraithOnSurfaceVariant
         label.textAlignment = .center
@@ -103,7 +103,7 @@ final class OnboardingIntroViewController: UIViewController {
         let stack = UIStackView()
         stack.translatesAutoresizingMaskIntoConstraints = false
         stack.axis = .vertical
-        stack.spacing = 24
+        stack.spacing = WraithSpacing.space24
         return stack
     }()
 
@@ -149,13 +149,13 @@ final class OnboardingIntroViewController: UIViewController {
         NSLayoutConstraint.activate([
             tideGlowView.widthAnchor.constraint(equalToConstant: 360),
             tideGlowView.heightAnchor.constraint(equalToConstant: 360),
-            tideGlowView.centerXAnchor.constraint(equalTo: view.trailingAnchor, constant: -60),
-            tideGlowView.centerYAnchor.constraint(equalTo: view.topAnchor, constant: 140),
+            tideGlowView.centerXAnchor.constraint(equalTo: view.trailingAnchor, constant: -WraithSpacing.space60),
+            tideGlowView.centerYAnchor.constraint(equalTo: view.topAnchor, constant: WraithSpacing.space140),
 
             horizonGlowView.widthAnchor.constraint(equalToConstant: 300),
             horizonGlowView.heightAnchor.constraint(equalToConstant: 300),
-            horizonGlowView.centerXAnchor.constraint(equalTo: view.leadingAnchor, constant: 40),
-            horizonGlowView.centerYAnchor.constraint(equalTo: view.bottomAnchor, constant: -220)
+            horizonGlowView.centerXAnchor.constraint(equalTo: view.leadingAnchor, constant: WraithSpacing.space40),
+            horizonGlowView.centerYAnchor.constraint(equalTo: view.bottomAnchor, constant: -WraithSpacing.space220)
         ])
     }
 
@@ -204,7 +204,7 @@ final class OnboardingIntroViewController: UIViewController {
             scrollView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
             scrollView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             scrollView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            scrollView.bottomAnchor.constraint(equalTo: startButton.topAnchor, constant: -16),
+            scrollView.bottomAnchor.constraint(equalTo: startButton.topAnchor, constant: -WraithSpacing.space16),
 
             contentView.topAnchor.constraint(equalTo: scrollView.topAnchor),
             contentView.leadingAnchor.constraint(equalTo: scrollView.leadingAnchor),
@@ -212,41 +212,41 @@ final class OnboardingIntroViewController: UIViewController {
             contentView.bottomAnchor.constraint(equalTo: scrollView.bottomAnchor),
             contentView.widthAnchor.constraint(equalTo: scrollView.widthAnchor),
 
-            appKickerLabel.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 32),
+            appKickerLabel.topAnchor.constraint(equalTo: contentView.topAnchor, constant: WraithSpacing.space32),
             appKickerLabel.centerXAnchor.constraint(equalTo: contentView.centerXAnchor),
 
-            dividerView.topAnchor.constraint(equalTo: appKickerLabel.bottomAnchor, constant: 14),
+            dividerView.topAnchor.constraint(equalTo: appKickerLabel.bottomAnchor, constant: WraithSpacing.space14),
             dividerView.centerXAnchor.constraint(equalTo: contentView.centerXAnchor),
             dividerView.widthAnchor.constraint(equalToConstant: 40),
             dividerView.heightAnchor.constraint(equalToConstant: 2),
 
-            appTitleLabel.topAnchor.constraint(equalTo: dividerView.bottomAnchor, constant: 24),
-            appTitleLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 24),
-            appTitleLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -24),
+            appTitleLabel.topAnchor.constraint(equalTo: dividerView.bottomAnchor, constant: WraithSpacing.space24),
+            appTitleLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: WraithSpacing.space24),
+            appTitleLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -WraithSpacing.space24),
 
-            appSubtitleLabel.topAnchor.constraint(equalTo: appTitleLabel.bottomAnchor, constant: 12),
-            appSubtitleLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 24),
-            appSubtitleLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -24),
+            appSubtitleLabel.topAnchor.constraint(equalTo: appTitleLabel.bottomAnchor, constant: WraithSpacing.space12),
+            appSubtitleLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: WraithSpacing.space24),
+            appSubtitleLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -WraithSpacing.space24),
 
-            quizKickerLabel.topAnchor.constraint(equalTo: appSubtitleLabel.bottomAnchor, constant: 40),
-            quizKickerLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 24),
+            quizKickerLabel.topAnchor.constraint(equalTo: appSubtitleLabel.bottomAnchor, constant: WraithSpacing.space40),
+            quizKickerLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: WraithSpacing.space24),
 
-            quizTitleLabel.topAnchor.constraint(equalTo: quizKickerLabel.bottomAnchor, constant: 12),
-            quizTitleLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 24),
-            quizTitleLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -24),
+            quizTitleLabel.topAnchor.constraint(equalTo: quizKickerLabel.bottomAnchor, constant: WraithSpacing.space12),
+            quizTitleLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: WraithSpacing.space24),
+            quizTitleLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -WraithSpacing.space24),
 
-            quizSubtitleLabel.topAnchor.constraint(equalTo: quizTitleLabel.bottomAnchor, constant: 12),
-            quizSubtitleLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 24),
-            quizSubtitleLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -24),
+            quizSubtitleLabel.topAnchor.constraint(equalTo: quizTitleLabel.bottomAnchor, constant: WraithSpacing.space12),
+            quizSubtitleLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: WraithSpacing.space24),
+            quizSubtitleLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -WraithSpacing.space24),
 
-            stepsStackView.topAnchor.constraint(equalTo: quizSubtitleLabel.bottomAnchor, constant: 32),
-            stepsStackView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 24),
-            stepsStackView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -24),
-            stepsStackView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -24),
+            stepsStackView.topAnchor.constraint(equalTo: quizSubtitleLabel.bottomAnchor, constant: WraithSpacing.space32),
+            stepsStackView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: WraithSpacing.space24),
+            stepsStackView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -WraithSpacing.space24),
+            stepsStackView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -WraithSpacing.space24),
 
-            startButton.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 24),
-            startButton.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -24),
-            startButton.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -16)
+            startButton.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: WraithSpacing.space24),
+            startButton.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -WraithSpacing.space24),
+            startButton.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -WraithSpacing.space16)
         ])
     }
 
